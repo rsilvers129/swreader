@@ -1,0 +1,172 @@
+"""Field layouts of SolidWorks MFC classes, worked out from documents (see docs/FORMAT.md §4).
+
+Every layout notes the document versions it was checked against. Field names ending in ``_u`` are not yet
+understood; they are kept so the walk stays aligned.
+"""
+from __future__ import annotations
+
+from .objects import layout
+
+
+# -- containers ------------------------------------------------------------------------------------------------
+
+@layout("su_CStringArray")
+def _cstring_array(r, o):
+    o["items"] = r.cstrings()
+
+
+@layout("suObList", "suObArray")
+def _oblist(r, o):
+    o["items"] = r.objs()
+
+
+# -- document header ------------------------------------------------------------------------------------------
+
+@layout("moPart_c", "moAssembly_c", "moDrawing_c")
+def _document(r, o):
+    o["version"] = r.u32()
+    r.version = o["version"]
+    o["header"] = r.obj()
+
+
+@layout("moHeader_c")
+def _header(r, o):
+    o["users"] = r.obj()                 # su_CStringArray of user names
+    o["array2_u"] = r.obj()              # su_CStringArray
+    o["logs"] = r.obj()                  # suObList of moLogs_c: creation/modification history per node
+    o["created"] = r.u32()               # unix time
+    o["next_id"] = r.u32()
+    o["u1_u"] = r.u16()
+    o["u2_u"] = r.u32()
+    o["ext"] = r.obj()                   # moExtObject_c
+
+
+@layout("moLogs_c")
+def _logs(r, o):
+    o["stamps"] = [r.obj() for _ in range(r.u16())]
+    o["id"] = r.u32()
+    o["name"] = r.cstring()
+
+
+@layout("moStamp_c")
+def _stamp(r, o):
+    o["kind"] = r.u16()                  # 0 created, 1 modified, 2 deleted (follows the action text)
+    o["user"] = r.u32()                  # index into the header's user list
+    o["time"] = r.u32()                  # unix time
+    o["action"] = r.cstring()
+
+
+@layout("moCStringHandle_c")
+def _cstring_handle(r, o):
+    o["text"] = r.cstring()
+
+
+@layout("moExtObject_c")
+def _ext_object(r, o):
+    """A document reference: this document's path/name (in the header) or a base part (derived parts)."""
+    o["path"] = r.obj()                  # moCStringHandle_c
+    o["name"] = r.obj()                  # moCStringHandle_c
+    o["record"] = v = r.u16()
+    r.u8()
+    o["created"] = r.u32()
+    r.u8()
+    o["saved"] = r.u32()
+    if v == 2:
+        o["u1_u"], o["u2_u"], o["u3_u"] = r.u32(), r.u32(), r.i32()
+        o["configuration"] = r.cstring()
+        o["u4_u"], o["u5_u"] = r.i32(), r.u32()
+        o["tag_u"] = r.raw(8)
+        o["u6_u"], o["u7_u"] = r.u32(), r.u32()
+        o["time1"] = r.u32()
+        r.raw(22)
+        o["time2"] = r.u32()
+        o["list"] = r.obj()              # suObList (empty so far)
+        r.raw(28)
+        o["box_u"] = r.f64s(8)           # bounding box and extents (order not yet confirmed)
+        o["u8_u"], o["u9_u"] = r.u32(), r.u32()
+    elif v == 3:
+        o["u1_u"], o["u2_u"], o["u3_u"] = r.u32(), r.u32(), r.u32()
+        o["configuration"] = r.cstring()
+        o["u4_u"], o["u5_u"] = r.i32(), r.u32()
+        o["time1"], o["u6_u"] = r.u32(), r.u32()
+        o["base"] = r.obj()              # nested moExtObject_c: the referenced document
+    else:
+        raise ValueError(f"moExtObject_c record version {v}")
+
+
+@layout("moNodeName_c")
+def _node_name(r, o):
+    """The name part of every named node (feature, folder, plane, sketch, parameter ...)."""
+    o["name"] = r.cstring()
+    o["u0_u"] = r.u32()
+    o["flags"] = r.u32()
+    o["id"] = r.i32()                    # -1 for parameters
+    o["u1_u"] = r.u32()
+    if (r.version or 0) >= 10000:
+        o["comment"] = r.cstring()
+    o["u2_u"] = r.u16()
+    o["links"] = [r.u16() for _ in range(r.u16())]
+
+
+def stamps(r, o):
+    """Version stamps at the start of a feature's own data (all versions)."""
+    if (r.version or 0) >= 6000:
+        o["u3_u"] = r.u32()
+    o["u4_u"] = r.raw(12)
+    o["number"] = r.u32()
+    o["u5_u"] = r.u32()
+    r.u8()
+    o["created_in"] = (r.u32(), r.u32())         # (SolidWorks version, build)
+    o["rebuilt_in"] = (r.u32(),)
+    o["tolerance"] = r.f64()
+    o["rebuilt_in"] += (r.u32(),)
+    o["u6_u"] = r.u16()
+
+
+def feature(r, o):
+    """moFeature base: node name, stamps, description, state."""
+    o["node"] = r.obj()
+    stamps(r, o)
+    o["description"] = r.cstring()
+    r.u8()
+    o["u7_u"] = r.u32()
+    r.u8()
+    o["u8_u"] = (r.i32(), r.i32())
+    o["u9_u"] = r.f32()
+    o["u10_u"] = r.raw(12)
+    o["u11_u"] = r.u32()
+    o["u12_u"] = r.raw(9)
+    o["u13_u"] = r.i32()
+    o["modified"] = (r.u32(), r.u32())           # FILETIME, high dword first
+    o["u14_u"] = (r.u16(), r.u16(), r.u8())
+    if (r.version or 0) >= 10000:
+        o["u15_u"] = r.u32()
+    if (r.version or 0) >= 16000:
+        o["u16_u"] = r.raw(8)
+
+
+@layout("moCommentsFolder_c", "moSensorFolder_c", "moDocsFolder_c", "moEqnFolder_c", "moFavoriteFolder_c")
+def _folder(r, o):
+    feature(r, o)
+
+
+@layout("moSurfaceBodyFolder_c", "moSolidBodyFolder_c")
+def _folder_u8(r, o):
+    feature(r, o)
+    o["u20_u"] = r.u8()
+
+
+@layout("moDetailCabinet_c")
+def _detail_cabinet(r, o):
+    """Annotations folder."""
+    feature(r, o)
+    if (r.version or 0) < 16000:
+        o["u20_u"] = r.u8()
+
+
+@layout("moMaterialFolder_c")
+def _material_folder(r, o):
+    feature(r, o)
+    o["material"] = r.cstring()
+    if (r.version or 0) >= 6000:
+        o["u20_u"] = r.u32()
