@@ -143,14 +143,44 @@ def scan_zip(data: bytes) -> dict[str, list[_Candidate]]:
     return out
 
 
+def sections(raw: bytes, start: int = 0) -> list[tuple[int, bytes]]:
+    """All chained sections in a stream, as (offset of the GUID, inflated data).
+
+    A section is ``chain_len:u32 GUID frame+``, where ``chain_len`` counts from the GUID to the end of the section and
+    each frame is ``usize:u32 zsize:u32 zlib[zsize]``. The frames of a section concatenate into one payload (large
+    Parasolid bodies are split into 1 MiB frames). Several sections can follow each other in one stream; the next one
+    starts at ``GUID offset + chain_len``. Layout from OrchardCAD's notes (P. Gallogly) and cadmpeg's SLDPRT notes."""
+    out = []
+    g = raw.find(WRAP_GUID, start)
+    while g >= 4:
+        chain = struct.unpack_from("<I", raw, g - 4)[0]
+        end = min(g + chain, len(raw)) if chain else len(raw)
+        p, data = g + 16, []
+        while p + 8 <= end:
+            usize, zsize = struct.unpack_from("<II", raw, p)
+            if not usize or not zsize or p + 8 + zsize > len(raw):
+                break
+            try:
+                data.append(zlib.decompress(raw[p + 8:p + 8 + zsize]))
+            except zlib.error:
+                break
+            p += 8 + zsize
+        out.append((g, b"".join(data)))
+        g = raw.find(WRAP_GUID, max(end, g + 16))
+    return out
+
+
 def unwrap(raw: bytes) -> bytes:
     """Strip the GUID wrapper used by compressed OLE streams and by Parasolid partitions, and inflate the zlib
-    stream behind it. Data without a wrapper is returned unchanged."""
+    frames behind it (the first section only; see :func:`sections`). Data without a wrapper is returned unchanged."""
     g = raw.find(WRAP_GUID, 0, 64)
     if g < 0:
         return raw
     if not raw[g + 16:].strip(b"\x00"):                  # empty stream: GUID + zero sizes only
         return b""
+    s = sections(raw)
+    if s and s[0][1]:
+        return s[0][1]
     for off in range(g + 16, min(len(raw), g + 48)):
         if raw[off] == 0x78 and (raw[off] << 8 | raw[off + 1]) % 31 == 0:
             try:

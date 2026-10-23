@@ -62,6 +62,12 @@ SWREADER_SAMPLES=/path/to/documents pytest   # also check every real document in
 No SolidWorks documents, exports or data derived from them are kept in this repository (see `.gitignore`);
 `tests/data` holds small hand-written examples only.
 
+## Credits
+
+* Patrick Gallogly / [3D Orchard](https://3dorchard.com) (OrchardCAD): the chained-section layout of the body streams,
+  where imported bodies are stored (`FeatureBodies`), and the assembly placement notes.
+* [cadmpeg](https://github.com/cadmpeg/cadmpeg): the first description of the chained sections (pre-2015 files).
+
 ## How the native format was worked out
 
 By examining the bytes of documents only, for interoperability. No SolidWorks software was disassembled or

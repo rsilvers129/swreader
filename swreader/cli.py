@@ -4,7 +4,7 @@
   swread sections FILE             list the document's sections and their sizes
   swread extract FILE OUTDIR       write every section to OUTDIR (wrapped streams inflated)
   swread preview FILE [-o X.png]   the embedded 640x480 preview (for a drawing: the first sheet)
-  swread parasolid FILE OUTDIR     each configuration's Parasolid partition as config-N.x_b
+  swread parasolid FILE OUTDIR     each configuration's bodies as config-N.x_b (imported bodies: config-N-i.x_b)
   swread features FILE [--all] [--json]   features and sketches in creation order, with dimensions
                                    (from the keyword index; --all includes folders, lights, anchors ...)
   swread index DIR [-o X.jsonl]    `info` for every document under DIR, one JSON line each
@@ -93,14 +93,16 @@ def cmd_preview(a):
 def cmd_parasolid(a):
     os.makedirs(a.outdir, exist_ok=True)
     with open_file(a.file) as sw:
-        parts = parasolid.partitions(sw)
-    if not parts:
-        sys.exit("no Parasolid partition (drawings and assemblies keep geometry in the referenced parts)")
-    for cfg, ps in sorted(parts.items(), key=lambda kv: int(kv[0])):
-        p = os.path.join(a.outdir, f"config-{cfg}.x_b")
-        with open(p, "wb") as f:
-            f.write(ps)
-        print(p, parasolid.header(ps))
+        configs = sorted({t["config"] for t in parasolid.transmits(sw)}, key=int)
+        bodies = {c: parasolid.model(sw, c) for c in configs}
+    if not any(bodies.values()):
+        sys.exit("no Parasolid bodies (drawings and assemblies keep geometry in the referenced parts)")
+    for cfg, ts in bodies.items():
+        for i, t in enumerate(ts):
+            p = os.path.join(a.outdir, f"config-{cfg}.x_b" if len(ts) == 1 else f"config-{cfg}-{i + 1}.x_b")
+            with open(p, "wb") as f:
+                f.write(t["data"])
+            print(p, t["name"] or "", parasolid.header(t["data"]))
 
 
 def cmd_index(a):

@@ -7,7 +7,7 @@ import zlib
 import pytest
 
 from swreader import FormatError, open_file, unwrap
-from swreader.container import WRAP_GUID, ZIP_MARK, nibble_swap
+from swreader.container import WRAP_GUID, ZIP_MARK, nibble_swap, sections
 from swreader import props
 
 
@@ -83,6 +83,23 @@ def test_unwrap():
     wrapped = struct.pack("<I", len(z) + 20) + WRAP_GUID + struct.pack("<II", len(payload), len(z)) + z
     assert unwrap(wrapped) == payload
     assert unwrap(b"plain data") == b"plain data"
+
+
+def _section(payload, frame=1000):
+    """A chained section: chain_len, GUID, then one usize/zsize/zlib frame per `frame` bytes of payload."""
+    body = WRAP_GUID
+    for i in range(0, len(payload), frame):
+        z = zlib.compress(payload[i:i + frame])
+        body += struct.pack("<II", len(payload[i:i + frame]), len(z)) + z
+    return struct.pack("<I", len(body)) + body
+
+
+def test_sections_multi_frame_and_chained():
+    part = b"PS\x00\x00\x00?: TRANSMIT FILE (partition)" + bytes(range(256)) * 20
+    deltas = b"PS\x00\x00\x00?: TRANSMIT FILE (deltas)" + b"d" * 300
+    raw = b"\0" * 8 + _section(part) + b"\0" * 5 + _section(deltas)
+    assert [d for _, d in sections(raw)] == [part, deltas]
+    assert unwrap(raw) == part                      # all frames of the first section, not just the first frame
 
 
 def test_nibble_swap_roundtrip():

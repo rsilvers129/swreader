@@ -186,8 +186,12 @@ def component_tree(sw: SwFile) -> dict | None:
             models[m.get("id")]["components"].append({
                 "name": r.get("swComponentName"), "model": models.get(r.get("swModelRef"), {}).get("name"),
                 "configuration": r.get("swConfigurationName"),
+                "configuration_id": r.get("swConfigurationId"),
                 "suppressed": r.get("swSuppressed") == "YES", "hidden": r.get("swHidden") == "YES",
-                "exclude_from_bom": r.get("swExcludeFromBOM") == "YES"})
+                "exclude_from_bom": r.get("swExcludeFromBOM") == "YES",
+                "virtual": r.get("swIsVirtualComponent") == "YES",
+                # 4x4 local -> parent, column-major; translation (metres) at 12-14
+                "transform": [float(v) for v in r.get("swTransform").split()] if r.get("swTransform") else None})
     return {"files": list(files.values()), "models": list(models.values())}
 
 

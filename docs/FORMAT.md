@@ -36,11 +36,20 @@ Standard compound file (`D0 CF 11 E0 A1 B1 1A E1`) with the same stream names. S
 (§1.3). Properties are OLE property sets ([MS-OLEPS]) in `\x05DocumentSummaryInformation`, `Config-N-Properties`
 and `ISolidWorksInformation` instead of XML.
 
-### 1.3 GUID wrapper
+### 1.3 GUID wrapper (chained sections)
 
-Compressed OLE streams and every Parasolid partition (both container kinds) are wrapped:
-`[u32]? GUID 231dd571-da81-48a2-a858-98b21b89ef99 (stored as these bytes) u32 u32 [u32] zlib-stream`.
-The u32s are sizes; `swreader.unwrap` locates the zlib header after the GUID.
+Compressed OLE streams and every Parasolid stream (both container kinds) are made of *chained sections*:
+
+```
+section := chain_len:u32  GUID 231dd571-da81-48a2-a858-98b21b89ef99 (stored as these bytes)  frame+  [zero padding]
+frame   := usize:u32  zsize:u32  zlib[zsize]          (inflates to usize bytes)
+```
+
+`chain_len` counts from the GUID to the end of the section. The frames of one section concatenate into one payload;
+large Parasolid bodies are split into 1 MiB frames (about 6% of the parts in a large library; reading only the first
+frame cut them off). One stream can hold several sections; the next starts at `GUID offset + chain_len`.
+`swreader.container.sections` returns them all, `unwrap` the first. Layout first described by cadmpeg's SLDPRT notes
+(pre-2015) and OrchardCAD's notes (P. Gallogly; same in 2015+ files); confirmed on our corpus.
 
 ## 2. Sections
 
@@ -54,9 +63,11 @@ The u32s are sizes; `swreader.unwrap` locates the zlib header after the GUID.
 | `docProps/ISolidWorksInformation.xml` | `SW-*` system properties, units, `SW-MassProp-Config-N` | confirmed |
 | `swXmlContents/Features` | document type, configurations (XML) | confirmed |
 | `swXmlContents/MATERIALTREE` | material (UTF-16 XML, `sldmaterials` schema) | confirmed |
-| `swXmlContents/COMPINSTANCETREE` | assembly: referenced files, models, component instances, bounding boxes | confirmed |
+| `swXmlContents/COMPINSTANCETREE` | assembly: referenced files, models, component instances, placements, bounding boxes (§2.2) | confirmed |
 | `swXmlContents/CustomProperties` (drawings) | drawing property XML | seen |
-| `Contents/Config-N-Partition` | Parasolid transmit file (§3) | confirmed |
+| `Contents/Config-N-Partition` | Parasolid partition + deltas transmits (§3) | confirmed |
+| `Config-N-FeatureBodies/LocalBodies` | bodies of imported features, one Parasolid part transmit per record (§3) | confirmed |
+| `Contents/Config-N-StockBodies` | base bodies of derived parts (§3) | seen |
 | `Contents/Config-N-Body` | pre-2004 documents (instead of `-Partition`): `u32 length` + data in an older, non-zlib compression | not decoded |
 | `Contents/Config-N-GhostPartition` | smaller Parasolid partition (purpose unknown) | seen |
 | `Contents/DisplayLists` | tessellated display data (mesh) | not decoded |
@@ -70,11 +81,31 @@ The u32s are sizes; `swreader.unwrap` locates the zlib header after the GUID.
 14 comma-separated numbers, SI units. Confirmed: `[0..2]` centre of mass (m), `[3]` volume (m³), `[4]` surface
 area (m²), `[5]` mass (kg). `[6..13]` not yet identified (probably inertia terms).
 
+### 2.2 `COMPINSTANCETREE` placements
+
+Every assembly model in the file (the document and each sub-assembly) is an `swModel` whose children are its direct
+`swReference` instances; `swModelRef` points at the referenced model, which has its own references (nesting).
+`swTransform` = 16 numbers, a column-major 4x4 matrix, local -> parent, translation in metres at indices 12-14.
+`swConfigurationId` selects the referenced part's `Config-N-*` streams. `swIsVirtualComponent="YES"` (names with `^`)
+are components stored inside the assembly. (OrchardCAD's notes; transform layout checked on our corpus.)
+
 ## 3. Geometry — Parasolid
 
-`Contents/Config-N-Partition`, unwrapped (§1.3), begins
-`PS\0\0\0?: TRANSMIT FILE (partition) created by modeller version <v>` followed by a schema name
-`SCH_<v>_<n>_<base>` — a standard Parasolid binary transmit (x_b) partition. Siemens publishes the XT format reference.
+Each section (§1.3) of a Parasolid stream is a standard Parasolid binary transmit (x_b): it begins
+`PS\0\0\0?: TRANSMIT FILE (<guise>) created by modeller version <v>` followed by a schema name
+`SCH_<v>_<n>_<base>`. Siemens publishes the XT format reference.
+
+* `Contents/Config-N-Partition` holds two sections: the *partition* transmit with the configuration's bodies, then a
+  *deltas* transmit (rollback marks). The partition can be **empty (~300 bytes)**: when the body comes from an
+  imported feature (e.g. a STEP import) it is stored in
+* `Config-N-FeatureBodies/LocalBodies` (no `Contents/` prefix): `count:u32`, then per record a UTF-16 CString (the
+  feature name, e.g. `<file>.step<1>`), a few u32s, and one section holding a plain *part* transmit (no guise word).
+  A multi-body import has one record per body.
+* `Contents/Config-N-StockBodies`: base bodies of derived parts.
+* `Contents/Config-N-GhostPartition`: never the model.
+
+In a large library about 8% of the parts had an empty partition and their bodies in FeatureBodies.
+`swreader.parasolid.model()` picks the right transmits.
 
 ## 4. Serialized objects (MFC CArchive)
 
