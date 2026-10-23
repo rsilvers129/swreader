@@ -857,28 +857,42 @@ def apply_profile(rb, profile, log):
         elif target.startswith("component.description"):
             comp.description = props[k]
     mat_name = ((rb.doc.get("part") or {}).get("material") or {}).get("name")
-    wanted = (profile.get("materials") or {}).get(mat_name) if mat_name else None
-    if isinstance(wanted, str):
-        wanted = [wanted]
-    if mat_name and not wanted:
-        log(f"  material '{mat_name}' has no Fusion material in the profile (kept as attribute)")
+    entry = (profile.get("materials") or {}).get(mat_name) if mat_name else None
+    if mat_name and not entry:
+        log(f"  material '{mat_name}' is not in the profile (kept as attribute)")
         return
-    if not wanted:
+    if not entry:
         return
+    if isinstance(entry, (str, list)):                       # older profile form: just the Fusion names
+        entry = {"name": mat_name.split("|", 1)[-1], "closest": [entry] if isinstance(entry, str) else entry}
     app = adsk.core.Application.get()
-    mat = None
-    for name in wanted:
+    base = None
+    for name in entry.get("closest") or []:
         for lib in app.materialLibraries:
-            mat = lib.materials.itemByName(name)
-            if mat:
+            base = lib.materials.itemByName(name)
+            if base:
                 break
-        if mat:
+        if base:
             break
-    if mat is None:
+    if base is None:
         names = sorted({m.name for lib in app.materialLibraries for m in lib.materials})
-        log(f"  none of {wanted} found for '{mat_name}'. Materials in Fusion's libraries:")
+        log(f"  none of {entry.get('closest')} found for '{mat_name}'. Materials in Fusion's libraries:")
         log("    " + "; ".join(names))
         return
+    # a copy named exactly like the company material, so the title block's Material attribute shows that name
+    want = entry.get("name") or base.name
+    mat = rb.design.materials.itemByName(want) or rb.design.materials.addByCopy(base, want)
+    dens = entry.get("density_kg_m3")
+    if mat and dens:
+        for prop in mat.materialProperties:
+            if "ensity" in prop.name:
+                fp = adsk.core.FloatProperty.cast(prop)
+                if fp:
+                    fp.value = rb.design.unitsManager.convert(dens, "kg / m^3", fp.units) if fp.units else dens
+                    log(f"  density {dens} kg/m^3 set ({fp.units})")
+                break
+    elif entry.get("library_density_issue"):
+        log(f"  density kept from Fusion's '{base.name}': {entry['library_density_issue']}")
     for body in comp.bRepBodies:
         body.material = mat
-    log(f"  material: {mat_name} -> {mat.name} (exact material stays in the 'Material' attribute and on the drawing)")
+    log(f"  material: {mat_name} -> '{want}' (copy of Fusion '{base.name}')")
