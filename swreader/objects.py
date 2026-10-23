@@ -49,7 +49,7 @@ class Reader(Archive):
         """Continue with the next stream of the same archive (the map is shared)."""
         self.data, self.pos = data, 0
 
-    def obj(self):
+    def obj(self, expect=None):
         start = self.pos
         t = self.tag()
         if t[0] == "null":
@@ -57,9 +57,13 @@ class Reader(Archive):
         if t[0] == "ref":
             return Ref(t[1], t[2])
         _, name, schema, idx = t
-        fn = REGISTRY.get(name)
+        fn = REGISTRY.get(name) if isinstance(name, str) else None
+        if fn is None and isinstance(name, tuple) and expect:
+            # a class defined in the configuration stream (not visible here): the caller says what it is
+            self.map[name[1]] = ("class", expect, 1)
+            name, fn = expect, REGISTRY.get(expect)
         if fn is None:
-            raise UnknownClass(name, start, idx)
+            raise UnknownClass(name if isinstance(name, str) else f"<config class {name[1]}>", start, idx)
         o = {"_c": name, "_i": idx}
         self.map[idx] = o
         self.trace.append((start, name, idx))

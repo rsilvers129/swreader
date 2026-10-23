@@ -5,6 +5,8 @@
   swread extract FILE OUTDIR       write every section to OUTDIR (wrapped streams inflated)
   swread preview FILE [-o X.png]   the embedded 640x480 preview (for a drawing: the first sheet)
   swread parasolid FILE OUTDIR     each configuration's Parasolid partition as config-N.x_b
+  swread features FILE [--all] [--json]   features and sketches in creation order, with dimensions
+                                   (from the keyword index; --all includes folders, lights, anchors ...)
   swread index DIR [-o X.jsonl]    `info` for every document under DIR, one JSON line each
   swread classes FILE [SECTION]    MFC classes defined in each object stream (or one section)
   swread dump FILE SECTION [--start N --end N]   annotated dump of an object stream (format work)
@@ -21,7 +23,7 @@ import json
 import os
 import sys
 
-from . import explore, export, parasolid, props
+from . import explore, export, keywords, parasolid, props
 from .container import FormatError, open_file, unwrap
 from .mfc import find_class_names
 
@@ -36,6 +38,26 @@ def cmd_info(a):
     with open_file(a.file) as sw:
         json.dump(props.summary(sw), sys.stdout, indent=2, ensure_ascii=False, default=str)
         print()
+
+
+def cmd_features(a):
+    with open_file(a.file) as sw:
+        kw = keywords.read(sw)
+    if kw is None:
+        sys.exit("this document has no keyword index")
+    items = keywords.features(kw, modelling_only=not a.all)
+    if a.json:
+        json.dump({"configurations": kw["configurations"], "features": items, "summary": keywords.summary(kw)},
+                  sys.stdout, indent=2, ensure_ascii=False)
+        print()
+        return
+    for c in kw["configurations"]:
+        print(f"configuration {c.get('name')!r}" + (f"  material {c['material']!r}" if c.get("material") else ""))
+    for it in items:
+        dims = "  ".join(f"{d['name']}={d['display']}" for d in it.get("dimensions", []))
+        print(f"{it['id']:>6}  {it.get('canonical') or it.get('type') or it['kind']:<20} {it.get('name') or '':<32} {dims}")
+    s = keywords.summary(kw)
+    print(f"-- {s['modelling_features']} features, {s['sketches']} sketches, {s['dimensions']} dimensions")
 
 
 def cmd_sections(a):
@@ -155,6 +177,8 @@ def main(argv=None):
     s = sub.add_parser("extract"); s.add_argument("file"); s.add_argument("outdir"); s.set_defaults(fn=cmd_extract)
     s = sub.add_parser("preview"); s.add_argument("file"); s.add_argument("-o", "--output"); s.set_defaults(fn=cmd_preview)
     s = sub.add_parser("parasolid"); s.add_argument("file"); s.add_argument("outdir"); s.set_defaults(fn=cmd_parasolid)
+    s = sub.add_parser("features"); s.add_argument("file"); s.add_argument("--all", action="store_true")
+    s.add_argument("--json", action="store_true"); s.set_defaults(fn=cmd_features)
     s = sub.add_parser("index"); s.add_argument("dir"); s.add_argument("-o", "--output"); s.set_defaults(fn=cmd_index)
     s = sub.add_parser("classes"); s.add_argument("file"); s.add_argument("section", nargs="?"); s.set_defaults(fn=cmd_classes)
     s = sub.add_parser("dump"); s.add_argument("file"); s.add_argument("section")

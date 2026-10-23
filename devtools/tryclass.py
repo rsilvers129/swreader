@@ -6,14 +6,25 @@ from swreader import open_file
 from swreader.mfc import find_class_names
 import swreader.objects as O
 import swreader.classes as C
+import swreader.features as F
 
 ROOT = os.environ.get("SWREADER_SAMPLES", ".")
 _cache = {}
 
 def corpus(section="Contents/Config-0-ResolvedFeatures", ext=".sldprt", limit=None):
+    """[(path, version, stream, node tag, classes)] for every document under SWREADER_SAMPLES (os.pathsep-separated
+    roots). The default section means "the feature tree" (lowest-numbered configuration that has one). With
+    SWREADER_CACHE set, the list is pickled there and reused."""
     key = (section, ext)
     if key in _cache: return _cache[key]
-    files = [os.path.join(r, f) for r, _, fs in os.walk(ROOT) for f in fs if f.lower().endswith(ext) and not f.startswith(("._", "~$"))]
+    cache = os.environ.get("SWREADER_CACHE")
+    if cache and section == "Contents/Config-0-ResolvedFeatures" and ext == ".sldprt" and os.path.exists(cache):
+        import pickle
+        out = pickle.load(open(cache, "rb"))
+        _cache[key] = out[:limit] if limit else out
+        return _cache[key]
+    files = [os.path.join(r, f) for root in ROOT.split(os.pathsep) for r, _, fs in os.walk(root) for f in fs
+             if f.lower().endswith(ext) and not f.startswith(("._", "~$"))]
     random.seed(7); random.shuffle(files)
     out = []
     for p in files[:limit]:
@@ -22,12 +33,19 @@ def corpus(section="Contents/Config-0-ResolvedFeatures", ext=".sldprt", limit=No
             with open_file(p) as sw:
                 mv = [n for n in sw.names() if n.startswith("_MO_VERSION_")]
                 ver = int(mv[0].split("/")[0][12:]) if mv else 0
-                d = sw.read(section)
+                if section == "Contents/Config-0-ResolvedFeatures":
+                    fs = F.feature_stream(sw)
+                    d = fs[1] if fs else None
+                else:
+                    d = sw.read(section)
         except Exception: continue
         if not d: continue
         c = collections.Counter(d[m.start()-2:m.start()] for m in re.finditer(rb"\xff\xfe\xff", d) if m.start() >= 2 and d[m.start()-1] & 0x80)
         node = struct.unpack("<H", c.most_common(1)[0][0])[0] if c else None
         out.append((p, ver, d, node, find_class_names(d)))
+    if cache and not limit and section == "Contents/Config-0-ResolvedFeatures" and ext == ".sldprt":
+        import pickle
+        pickle.dump(out, open(cache, "wb"))
     _cache[key] = out
     return out
 

@@ -141,11 +141,11 @@ def feature(r, o):
     o["u14_u"] = (r.u16(), r.u16(), r.u8())
     if (r.version or 0) >= 10000:
         o["u15_u"] = r.u32()
-    if (r.version or 0) >= 16000:
+    if (r.version or 0) >= 14000:
         o["u16_u"] = r.raw(8)
 
 
-@layout("moCommentsFolder_c", "moSensorFolder_c", "moDocsFolder_c", "moEqnFolder_c")
+@layout("moCommentsFolder_c", "moSensorFolder_c", "moDocsFolder_c", "moEqnFolder_c", "moConfigCommentsFolder_c")
 def _folder(r, o):
     feature(r, o)
 
@@ -154,6 +154,18 @@ def _folder(r, o):
 def _favorites(r, o):
     feature(r, o)
     o["u20_u"] = r.raw(8 if (r.version or 0) >= 10000 else 2)
+
+
+@layout("moSelectionSetFolder_c")
+def _selection_sets(r, o):
+    feature(r, o)
+    o["u20_u"] = r.raw(6)                # checked 8000-19000 (empty folders)
+
+
+@layout("moInkMarkupFolder_c")
+def _ink_markup(r, o):
+    feature(r, o)
+    o["u20_u"] = r.raw(2)                # checked 14000-19000 (empty folders)
 
 
 @layout("moSurfaceBodyFolder_c", "moSolidBodyFolder_c")
@@ -178,6 +190,35 @@ def _material_folder(r, o):
     o["material"] = r.cstring()
     if (r.version or 0) >= 6000:
         o["u20_u"] = r.u32()
+
+
+@layout("moHistoryFolder_c")
+def _history_folder(r, o):
+    """History folder (2009+): recently changed features."""
+    feature(r, o)
+    o["items"] = r.objs()                # moHistoryFeatItemData_c
+
+
+@layout("moHistoryFeatItemData_c")
+def _history_item(r, o):
+    o["u1_u"] = r.u16()
+    o["u2_u"] = (r.u32(), r.u32(), r.i32(), r.u32())
+    o["text_u"] = r.cstring()
+    o["feature"] = r.obj()               # moCompFeature_c
+
+
+@layout("moCompFeature_c")
+def _comp_feature(r, o):
+    """A reference to a feature by id (history items)."""
+    o["ref"] = r.obj(expect="moFeatureRef_c")
+
+
+@layout("moFeatureRef_c")
+def _feature_ref(r, o):
+    """Name not seen yet (defined in Config-N): a feature id and its last-change time."""
+    o["u1_u"] = r.raw(79)
+    o["feature_id"] = r.u32()
+    o["time"] = r.u32()                  # unix time
 
 
 def _by_version(r, table):

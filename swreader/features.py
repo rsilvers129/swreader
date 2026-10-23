@@ -6,12 +6,14 @@ first ``base`` entries are opaque, and finds ``base`` itself:
 
 * the node-name class (``moNodeName_c``) is defined in ``Config-N``; its index is the tag in front of the first
   name string of the stream;
-* ``base`` (the number of map entries ``Config-N`` created) is unknown until the stream first refers back to a
+* ``base`` is the number of map entries ``Config-N`` created. From format 8000 (SolidWorks 2008/2009) on, the stream
+  starts with it as a u32. Older streams do not store it: it is unknown until the stream first refers back to a
   class it defined itself; each class defined so far gives one candidate, and the candidate that lets the walk
   get furthest wins.
 """
 from __future__ import annotations
 
+import re
 import struct
 
 from . import classes  # noqa: F401  (registers layouts)
@@ -63,8 +65,28 @@ class StreamReader(Reader):
             return ("ref", t, None)                    # unresolved until the base is known
         raise ArchiveError(f"reference to map index {t} beyond {len(self.map) - 1} at {self.pos}")
 
+    def _new_of(self, ci):
+        e = self.map[ci] if ci < len(self.map) else None
+        if e == ("ext",):
+            return ("new", ("ext", ci), 1, self._new_object(("ext", ci), 1)[3])
+        return super()._new_of(ci)
+
     def _offset(self):
         return (self.base if self.base is not None else self.node_index) + 1
+
+
+def feature_stream(sw) -> tuple[str, bytes] | None:
+    """(section name, data) of the feature tree of the lowest-numbered configuration that has one."""
+    found = []
+    for n in sw.names():
+        m = re.fullmatch(r"Contents/Config-(\d+)-ResolvedFeatures", n)
+        if m:
+            found.append((int(m.group(1)), n))
+    for _, n in sorted(found):
+        d = sw.read(n)
+        if d:
+            return n, d
+    return None
 
 
 def _node_index(data: bytes) -> int | None:
@@ -75,11 +97,17 @@ def _node_index(data: bytes) -> int | None:
     return t & 0x7FFF if t & 0x8000 else None
 
 
+STORED_BASE = 8000                                   # first format version whose stream starts with the map base
+
+
 def walk(data: bytes, version: int, base: int | None = None):
     """Walk the stream. Returns (top-level objects, reader, error or None)."""
     node = _node_index(data)
     if node is None:
         raise ArchiveError("no named object in stream")
+    if version >= STORED_BASE:
+        # the stored value is the archive's map count, which includes the null entry 0
+        return _walk_once(data, version, node, struct.unpack_from("<I", data, 0)[0] - 1, start=4)
     if base is None:
         objs, r, err = _walk_once(data, version, node, None)
         if not isinstance(err, NeedBase):
@@ -96,8 +124,9 @@ def walk(data: bytes, version: int, base: int | None = None):
     return _walk_once(data, version, node, base)
 
 
-def _walk_once(data, version, node, base):
+def _walk_once(data, version, node, base, start=0):
     r = StreamReader(data, version, node, base)
+    r.pos = start
     objs = []
     try:
         n = r.count()

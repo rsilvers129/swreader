@@ -6,7 +6,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 
-from . import propset
+from . import keywords, propset
 from .container import SwFile
 
 VT = "{http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes}"
@@ -208,4 +208,13 @@ def summary(sw: SwFile) -> dict:
         "sw_information": {k: v for k, v in info.items() if not k.startswith("SW-MassProp")},
         "has_preview": sw.has("PreviewPNG"),
         "has_parasolid": any(n.endswith("-Partition") and "Ghost" not in n for n in sw.names()),
+        "features": _keyword_summary(sw),
     }
+
+
+def _keyword_summary(sw: SwFile) -> dict | None:
+    try:
+        kw = keywords.read(sw)
+    except ET.ParseError:
+        return None
+    return keywords.summary(kw) if kw else None
