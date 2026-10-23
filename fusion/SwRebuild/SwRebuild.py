@@ -58,6 +58,24 @@ class _Execute(adsk.core.CommandEventHandler):
             adsk.core.Application.get().userInterface.messageBox("SwRebuild error:\n" + traceback.format_exc())
 
 
+def _profile_path(ui):
+    """Company profile location, remembered in profile_path.txt next to the add-in (asked once)."""
+    here = os.path.dirname(os.path.abspath(__file__))
+    store = os.path.join(here, "profile_path.txt")
+    if os.path.exists(store):
+        p = open(store, encoding="utf-8").read().strip()
+        if os.path.exists(p):
+            return p
+    dlg = ui.createFileDialog()
+    dlg.title = "Company profile (profile.json) - Cancel to rebuild without one"
+    dlg.filter = "Company profile (*.json)"
+    if dlg.showOpen() != adsk.core.DialogResults.DialogOK:
+        return None
+    with open(store, "w", encoding="utf-8") as f:
+        f.write(dlg.filename)
+    return dlg.filename
+
+
 def rebuild_one():
     app = adsk.core.Application.get()
     ui = app.userInterface
@@ -110,6 +128,7 @@ def rebuild_one():
             if r == adsk.core.DialogResults.DialogNo:
                 step_mode = False
     rb.finish()
+    rebuild.apply_profile(rb, rebuild.load_profile(_profile_path(ui)), log)
     log(f"done: {len(rb.built)} built, {len(rb.skipped)} skipped")
     for n, t, why in rb.skipped:
         log(f"  skipped {n} ({t}): {why}")

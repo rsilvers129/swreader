@@ -813,3 +813,63 @@ def load_json(path):
     if doc.get("format_version") != 1:
         raise ValueError(f"{path}: unsupported format_version {doc.get('format_version')}")
     return doc
+
+
+# -- company profile (properties, materials) ---------------------------------------------------------------------
+
+def load_profile(path):
+    """The company profile (docs/PROFILE.md), or None."""
+    import json
+    import os
+    if not path or not os.path.exists(path):
+        return None
+    with open(path, encoding="utf-8") as f:
+        p = json.load(f)
+    return p if p.get("format") == "swreader-company-profile" else None
+
+
+def apply_profile(rb, profile, log):
+    """Set part number, description and material from the SolidWorks properties as the company profile says, and
+    keep every SolidWorks property as an attribute (group 'SolidWorks') so nothing is lost."""
+    info = rb.doc.get("document") or {}
+    props = {k: (v.get("value") or v.get("expression") or "") for k, v in (info.get("custom_properties") or {}).items()}
+    cfg = info.get("active_configuration")
+    for c in info.get("configurations") or []:
+        if c.get("name") == cfg:
+            props.update({k: (v.get("value") or v.get("expression") or "")
+                          for k, v in (c.get("custom_properties") or {}).items()})
+    comp = rb.root
+    for k, v in props.items():
+        try:
+            comp.attributes.add("SolidWorks", k, str(v))
+        except Exception as e:                                  # noqa: BLE001
+            log(f"  attribute {k} not stored ({e})")
+    if not profile:
+        log("  no company profile: part number / description / material not mapped")
+        return
+    rules = profile.get("properties") or {}
+    for k, rule in rules.items():
+        if not isinstance(rule, dict) or k not in props or not props[k]:
+            continue
+        target = rule.get("fusion") or ""
+        if target.startswith("component.partNumber"):
+            comp.partNumber = props[k]
+        elif target.startswith("component.description"):
+            comp.description = props[k]
+    mat_name = ((rb.doc.get("part") or {}).get("material") or {}).get("name")
+    fusion_mat = (profile.get("materials") or {}).get(mat_name) if mat_name else None
+    if mat_name and not fusion_mat:
+        log(f"  material '{mat_name}' has no Fusion material in the profile (kept as attribute)")
+    if fusion_mat:
+        app = adsk.core.Application.get()
+        mat = None
+        for lib in app.materialLibraries:
+            mat = lib.materials.itemByName(fusion_mat)
+            if mat:
+                break
+        if mat is None:
+            log(f"  Fusion material '{fusion_mat}' not found in any material library")
+        else:
+            for body in comp.bRepBodies:
+                body.material = mat
+            log(f"  material: {mat_name} -> {fusion_mat}")

@@ -43,3 +43,4 @@ swexport/out/
 
 # per-session notes from agents (see docs/AGENT-GUIDE.md)
 HANDOFF.md
+fusion/SwRebuild/profile_path.txt

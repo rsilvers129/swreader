@@ -125,7 +125,8 @@ def check_fusion():
                                                     "flush", "close", "setdefault", "add", "item", "splitext",
                                                     "format_exc", "match", "sub", "cos", "sin", "atan2", "hypot",
                                                     "radians", "dot", "cross", "unit", "mul", "dist", "apply",
-                                                    "isalnum", "isalpha", "load", "dirname", "basename", "lower"}
+                                                    "isalnum", "isalpha", "load", "dirname", "basename", "lower",
+                                                    "abspath", "exists", "read", "strip"}
     unknown = sorted(c for c in calls if c not in every and c not in ours)
     print(f"{len(bad)} class/member problems; {len(unknown)} called names not in any Fusion class")
     for b in sorted(set(bad)):

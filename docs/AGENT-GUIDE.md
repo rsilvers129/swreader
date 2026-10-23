@@ -17,6 +17,11 @@ Read this whole guide before you start. Then read the documents in **Step 1** be
 3. `docs/FORMAT.md` - what is known about the native SolidWorks file format (containers, MFC object streams).
 4. `docs/EXPORT.md` - the JSON that swexport writes (and SwRebuild and `swread summary` read).
 5. `HANDOFF.md` at the repository root if it exists - notes from the previous session.
+6. `docs/PROFILE.md` and the **company profile** for the documents you work on (on wopr:
+   `/solidworks/company/profile.json`, drafted from the company's templates in `/solidworks/templates`). It says what
+   the company's custom properties mean (e.g. `Zeichnung` = Part Number), which materials and sheet formats exist,
+   and how they map to Fusion. Never guess these; if something is missing or marked `TO CONFIRM`, ask the owner via
+   `HANDOFF.md`.
 
 ### 1.2 The SolidWorks and Fusion documentation (`/reference/cad`)
 The official documentation is mirrored as Markdown. **It is the only source of truth for API names, signatures and
