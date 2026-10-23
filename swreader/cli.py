@@ -6,6 +6,8 @@
   swread preview FILE [-o X.png]   the embedded 640x480 preview (for a drawing: the first sheet)
   swread parasolid FILE OUTDIR     each configuration's Parasolid partition as config-N.x_b
   swread index DIR [-o X.jsonl]    `info` for every document under DIR, one JSON line each
+  swread classes FILE [SECTION]    MFC classes defined in each object stream (or one section)
+  swread dump FILE SECTION [--start N --end N]   annotated dump of an object stream (format work)
 """
 from __future__ import annotations
 
@@ -14,8 +16,9 @@ import json
 import os
 import sys
 
-from . import parasolid, props
+from . import explore, parasolid, props
 from .container import FormatError, open_file, unwrap
+from .mfc import find_class_names
 
 EXTS = (".sldprt", ".sldasm", ".slddrw")
 
@@ -78,7 +81,7 @@ def cmd_index(a):
     n = bad = 0
     for root, _dirs, files in os.walk(a.dir):
         for fn in sorted(files):
-            if not fn.lower().endswith(EXTS) or fn.startswith("~$"):
+            if not fn.lower().endswith(EXTS) or fn.startswith(("~$", "._")):
                 continue
             p = os.path.join(root, fn)
             try:
@@ -93,6 +96,32 @@ def cmd_index(a):
     print(f"{n} documents, {bad} unreadable", file=sys.stderr)
 
 
+def _object_streams(sw, only=None):
+    for n in sw.names():
+        if only and n != only:
+            continue
+        d = sw.read(n)
+        if d and (only or find_class_names(d)):
+            yield n, d
+
+
+def cmd_classes(a):
+    with open_file(a.file) as sw:
+        for n, d in _object_streams(sw, a.section):
+            names = find_class_names(d)
+            print(f"{n}  ({len(d):,} bytes, {len(names)} classes)")
+            for off, c, schema in names:
+                print(f"  {off:>10,}  {c}" + (f"  schema {schema}" if schema != 1 else ""))
+
+
+def cmd_dump(a):
+    with open_file(a.file) as sw:
+        d = sw.read(a.section)
+    if d is None:
+        sys.exit(f"no section {a.section!r}")
+    print(explore.dump(d, a.start, a.end))
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="swread", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -102,6 +131,9 @@ def main(argv=None):
     s = sub.add_parser("preview"); s.add_argument("file"); s.add_argument("-o", "--output"); s.set_defaults(fn=cmd_preview)
     s = sub.add_parser("parasolid"); s.add_argument("file"); s.add_argument("outdir"); s.set_defaults(fn=cmd_parasolid)
     s = sub.add_parser("index"); s.add_argument("dir"); s.add_argument("-o", "--output"); s.set_defaults(fn=cmd_index)
+    s = sub.add_parser("classes"); s.add_argument("file"); s.add_argument("section", nargs="?"); s.set_defaults(fn=cmd_classes)
+    s = sub.add_parser("dump"); s.add_argument("file"); s.add_argument("section")
+    s.add_argument("--start", type=int, default=0); s.add_argument("--end", type=int); s.set_defaults(fn=cmd_dump)
     a = ap.parse_args(argv)
     try:
         a.fn(a)

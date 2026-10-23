@@ -57,6 +57,7 @@ The u32s are sizes; `swreader.unwrap` locates the zlib header after the GUID.
 | `swXmlContents/COMPINSTANCETREE` | assembly: referenced files, models, component instances, bounding boxes | confirmed |
 | `swXmlContents/CustomProperties` (drawings) | drawing property XML | seen |
 | `Contents/Config-N-Partition` | Parasolid transmit file (§3) | confirmed |
+| `Contents/Config-N-Body` | pre-2004 documents (instead of `-Partition`): `u32 length` + data in an older, non-zlib compression | not decoded |
 | `Contents/Config-N-GhostPartition` | smaller Parasolid partition (purpose unknown) | seen |
 | `Contents/DisplayLists` | tessellated display data (mesh) | not decoded |
 | `Contents/Config-N-ResolvedFeatures`, `Contents/Config-N` | feature tree, serialized objects (§4) | not decoded |
@@ -75,14 +76,34 @@ area (m²), `[5]` mass (kg). `[6..13]` not yet identified (probably inertia term
 `PS\0\0\0?: TRANSMIT FILE (partition) created by modeller version <v>` followed by a schema name
 `SCH_<v>_<n>_<base>` — a standard Parasolid binary transmit (x_b) partition. Siemens publishes the XT format reference.
 
-## 4. Serialized objects
+## 4. Serialized objects (MFC CArchive)
 
-Feature-tree and drawing data are a stream of serialized objects. A new class is introduced as
-`FF FF 01 00 <u16 name length> <ASCII class name>`; class names are descriptive, e.g.
+Feature-tree, sketch and drawing data (`Contents/Config-N`, `Contents/Config-N-ResolvedFeatures`, `Contents/CMgr`,
+`Contents/Definition`, …) are **MFC CArchive** streams (confirmed; reader primitives in `swreader/mfc.py`):
 
-* parts: `moPart_c`, `moProfileFeature_c` (sketch), `moExtrusion_c`, `moLengthParameter_c`, …
-* drawings: `moView_c`, `moDisplayDistanceDim_c`, `moDisplayRadialDim_c`, `moDisplayAngularDim_c`,
-  `moDimTolerance_c`, `moDisplayNote_c`, `moTextDataChar_c`, `moAnnotationTable_c`, `moRow_c`, `moCellContent_c`, …
+* object tag (WORD): `0x0000` null; `0xFFFF` new class (`WORD schema, WORD name length, ASCII name`) followed by the
+  new object's data; `0x8000|i` new object of the class at map index `i`; `0x7FFF` + DWORD for big archives;
+  any other value = reference to an already-loaded object at that map index. Map indices start at 1 and are given,
+  in order, to every new class and every new object.
+* CString: `FF FE FF` + length (BYTE, or `FF` + WORD, or `FFFF` + DWORD) + UTF-16LE characters.
+* counts: WORD, or `FFFF` + DWORD.
 
-Numeric values are little-endian doubles in metres / radians; text is UTF-16LE (e.g. fit classes `H7`, `P9`).
-Decoding the object layouts is the main open work item.
+**The map is shared across streams of one configuration**: `Config-N-ResolvedFeatures` refers to classes first
+defined in `Config-N` (e.g. the node-name class), so `Config-N` must be read first.
+
+Class names are descriptive: parts use `moPart_c`, `moRefPlane_c`, `moProfileFeature_c`, `sgSketch` (sketch),
+`sgLineHandle`, `sgArcHandle`, `sgPointHandle`, `sgPntPntDist` / `sgPntLineDist` / `sgCircleDim` / `sgAnglDim`
+(sketch dimensions), `moLengthParameter_c` / `moAngleParameter_c` (dimension values), `moExtrusion_c`,
+`moICE_c`, `moRevolution_c`, `moRevCut_c`, `Fillet_c`, `Chamfer_c`, `moHoleWzd_c`, `moLPattern_c`, `moCirPattern_c`,
+`moMirrorPattern_c`, `moSweep_c`, `moHelix_c`, …; drawings use `moView_c`, `moDisplayDistanceDim_c`,
+`moDimTolerance_c`, `moDisplayNote_c`, `moAnnotationTable_c`, …
+
+### 4.1 Named nodes (partly decoded)
+
+Every feature, folder, plane, sketch and parameter starts with a node-name object (its own class, defined in
+`Config-N`): `CString name`, `u32 0`, `u32 flags` (`0x40000000`, `0xC0000000` seen), `u32 id`, then a block whose
+layout depends on a version word (`0x65`, `0x67` seen in 2012-era files). For `moLengthParameter_c` /
+`moAngleParameter_c` the value (metres / radians, f64) follows the name block; a parameter's name is the dimension
+name (`D1`, `D2`, …).
+
+Decoding the per-class layouts is the main open work item; `swread dump` and `swread classes` are the tools.

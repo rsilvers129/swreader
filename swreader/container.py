@@ -149,6 +149,8 @@ def unwrap(raw: bytes) -> bytes:
     g = raw.find(WRAP_GUID, 0, 64)
     if g < 0:
         return raw
+    if not raw[g + 16:].strip(b"\x00"):                  # empty stream: GUID + zero sizes only
+        return b""
     for off in range(g + 16, min(len(raw), g + 48)):
         if raw[off] == 0x78 and (raw[off] << 8 | raw[off + 1]) % 31 == 0:
             try:
