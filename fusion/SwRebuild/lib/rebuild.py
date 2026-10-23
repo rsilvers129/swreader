@@ -857,19 +857,28 @@ def apply_profile(rb, profile, log):
         elif target.startswith("component.description"):
             comp.description = props[k]
     mat_name = ((rb.doc.get("part") or {}).get("material") or {}).get("name")
-    fusion_mat = (profile.get("materials") or {}).get(mat_name) if mat_name else None
-    if mat_name and not fusion_mat:
+    wanted = (profile.get("materials") or {}).get(mat_name) if mat_name else None
+    if isinstance(wanted, str):
+        wanted = [wanted]
+    if mat_name and not wanted:
         log(f"  material '{mat_name}' has no Fusion material in the profile (kept as attribute)")
-    if fusion_mat:
-        app = adsk.core.Application.get()
-        mat = None
+        return
+    if not wanted:
+        return
+    app = adsk.core.Application.get()
+    mat = None
+    for name in wanted:
         for lib in app.materialLibraries:
-            mat = lib.materials.itemByName(fusion_mat)
+            mat = lib.materials.itemByName(name)
             if mat:
                 break
-        if mat is None:
-            log(f"  Fusion material '{fusion_mat}' not found in any material library")
-        else:
-            for body in comp.bRepBodies:
-                body.material = mat
-            log(f"  material: {mat_name} -> {fusion_mat}")
+        if mat:
+            break
+    if mat is None:
+        names = sorted({m.name for lib in app.materialLibraries for m in lib.materials})
+        log(f"  none of {wanted} found for '{mat_name}'. Materials in Fusion's libraries:")
+        log("    " + "; ".join(names))
+        return
+    for body in comp.bRepBodies:
+        body.material = mat
+    log(f"  material: {mat_name} -> {mat.name} (exact material stays in the 'Material' attribute and on the drawing)")
