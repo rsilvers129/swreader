@@ -158,14 +158,18 @@ swread dump FILE SECTION --start N --end M    # 4. annotated dump of any stretch
 4. Each step: walkall before and after, numbers written down.
 
 ### A.4 Where the frontier is
-`moOriginProfileFeature_c` -> `sgSketch` -> sketch entities. Notes so far:
-* every sketch entity starts with a common header `FF FF 1F 00 01 FF FF FF FF FF FF FF FF 00 00 80 BF ...`;
-* sketch points carry a type word `0x1E` followed by x, y (doubles, metres, sketch space);
-* lines refer to their end points through small `sgPointHandle` objects;
-* dimension parameters (`moLengthParameter_c`, `moAngleParameter_c`) are named nodes (`D1`, `D2` ...) whose value
-  (metres / radians) follows the name block.
-Once swexport output for the same documents exists, use it as the answer key: the export lists every sketch entity
-and dimension value the native decoder should find.
+`sgSketch`, after the line array (`classes.py` raises "sgSketch: rest not decoded"). What is known is in
+docs/FORMAT.md 4.1-4.3. Next steps, in order:
+1. The 13 arrays after the lines: find sketches with arcs, circles, splines, ellipses (KeyWords and the class lists
+   tell you which documents have them) and work out each record after `sk_entity`.
+2. The block after the arrays and the dimension/relation list (`sgPntPntDist`, `sgLLDist`, `sgAnglDim`,
+   `sgCircleDim`, ... with their parameters). The parameter values must match the KeyWords dimension texts of the
+   same sketch (`swread features FILE`) - that is your answer key, available for every document.
+3. `moCompRefPlane_c` (fixed size per version), then `moProfileFeature_c` around its `sgSketch`.
+4. Classes defined in `Config-N` (see FORMAT 4): needed for files whose sketch classes live there.
+Use `devtools/frontier.py` (per-version tally), `why.py TEXT` (examples of a stop), `autotail.py CLASS` (search for
+a tail layout). Corpus: `SWREADER_SAMPLES=/solidworks/samples:/solidworks/<library folder>` (read-only; derived data never
+goes into the repository), `SWREADER_CACHE=/work/corpus.pkl` to load it in seconds after the first run.
 
 ---
 

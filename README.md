@@ -41,12 +41,15 @@ swread info part.SLDPRT              # properties, mass, material, configuration
 swread sections part.SLDPRT          # what is inside the file
 swread preview part.SLDPRT -o p.png  # embedded preview image
 swread parasolid part.SLDPRT out/    # B-rep geometry as Parasolid transmit files
+swread features part.SLDPRT          # features and sketches in creation order, with dimension values
 swread index /path/to/library -o library.jsonl
 swread classes / dump                # format-work tools for the object streams
 ```
 
-Reads documents saved by SolidWorks 2001-2026 (both container formats). The feature tree is being decoded class by
-class (docs/FORMAT.md); until that is complete, swexport is the route to the full design data.
+Reads documents saved by SolidWorks 2001-2026 (both container formats). `swread features` lists every feature and
+sketch with its displayed dimension values for any document, from the keyword index SolidWorks embeds (no sketch
+geometry or end conditions). The binary feature tree is being decoded class by class (docs/FORMAT.md); until that is
+complete, swexport is the route to the full design data.
 
 ## Tests
 

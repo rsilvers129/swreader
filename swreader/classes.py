@@ -235,6 +235,75 @@ def _feature_ref(r, o):
     o["time"] = r.u32()                  # unix time
 
 
+# -- sketches ---------------------------------------------------------------------------------------------------
+
+def sk_entity(r, o):
+    """The part every sketch entity record starts with."""
+    o["id"] = r.u32()
+    o["sig_u"] = r.raw(17)
+    o["u1_u"] = r.u8()
+    o["u2_u"] = r.u32()
+    o["u3_u"] = r.u8()
+    o["u4_u"] = (r.u16(), r.u16(), r.u16(), r.u16())
+    o["u5_u"] = r.f32()
+    o["external"] = r.obj()              # sgExtEnt_c: the entity is projected from outside the sketch
+    o["u6_u"] = r.u16()
+    o["u7_u"] = r.raw(9)
+    o["u8_u"] = r.f64()
+    if (r.version or 0) >= 16000:
+        o["u9_u"] = r.raw(8)
+
+
+def sk_point(r, o):
+    sk_entity(r, o)
+    o["flags_u"] = r.u16()
+    o["x"], o["y"] = r.f64(), r.f64()    # sketch coordinates, metres
+    o["u10_u"] = (r.u16(), r.u16())
+    o["handles"] = [r.obj(), r.obj()]    # sg*Handle of the entities that end here (or null)
+    o["u11_u"] = (r.u16(), r.i32())
+    o["u12_u"] = r.raw(36)
+
+
+def sk_line(r, o):
+    sk_entity(r, o)
+    o["start"], o["end"] = r.u16(), r.u16()   # point indices
+    o["u10_u"] = r.u32()
+    o["u11_u"] = r.f64()
+    o["u12_u"] = r.u32()
+
+
+def sk_records(r, fn):
+    out = []
+    for _ in range(r.u32()):
+        x = {"pre_u": (r.u16(), r.u32())}
+        fn(r, x)
+        out.append(x)
+    return out
+
+
+@layout("sgSketch")
+def _sketch(r, o):
+    o["points"] = sk_records(r, sk_point)
+    o["lines"] = sk_records(r, sk_line)
+    raise ValueError(f"sgSketch: rest not decoded (at {r.pos})")
+
+
+@layout("sgPointHandle", "sgLineHandle", "sgArcHandle", "sgEntHandle", "sgEllipseHandle", "sgSplineHandle",
+        "sgParabolaHandle")
+def _sk_handle(r, o):
+    """A reference to a sketch entity: its index in the sketch's array."""
+    o["index"] = r.u16()
+    o["u1_u"] = r.i32()
+
+
+@layout("moOriginProfileFeature_c")
+def _origin_profile(r, o):
+    """The origin: a sketch feature holding one point."""
+    feature(r, o)
+    o["u20_u"] = r.raw(_by_version(r, [(0, 10), (14000, 6)]))
+    o["sketch"] = r.obj(expect="sgSketch")
+
+
 def _by_version(r, table):
     """Pick a per-version value: table = [(min_version, value), ...] in ascending order."""
     v = r.version or 0

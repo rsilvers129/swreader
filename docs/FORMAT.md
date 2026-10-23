@@ -91,6 +91,51 @@ Feature-tree, sketch and drawing data (`Contents/Config-N`, `Contents/Config-N-R
 **The map is shared across streams of one configuration**: `Config-N-ResolvedFeatures` refers to classes first
 defined in `Config-N` (e.g. the node-name class), so `Config-N` must be read first.
 
+* **Stored map count (format 8000 / SolidWorks 2009 and later).** `Config-N-ResolvedFeatures` starts with a u32: the
+  archive's map count at the end of `Config-N` (null entry included), then the WORD count of top-level tree items.
+  Local map indices therefore start at that value, and the walker needs no guessing. Older streams start directly
+  with the item count; their base is found by trying candidates (`swreader/features.py`).
+* **Classes defined in `Config-N`** appear in the feature stream only as `0x8000|i` with `i` below the stored count.
+  Their names are not visible there. Rebuilding `Config-N`'s map from its bytes does not work: new-class records
+  (+2) and new-object tags (+1) account for only part of the count (e.g. 337 of 1343) - the rest are entries that
+  leave no bytes (consistent with MFC `MapObject`) or objects whose tags are only found by decoding every layout.
+  What is known: index 1 precedes `moPart_c`, the node-name class is 4 in every 2009+ part, and between the
+  node-name class and the units table there are 3 such hidden entries. Layouts that know what class they hold name
+  the entry themselves (`Reader.obj(expect=...)`, e.g. `moCompFeature_c` -> `moFeatureRef_c`).
+* Many 2009+ parts define the sketch classes (`sgSketch`, `sg*Handle`, dimensions) in the feature stream itself;
+  in others they come from `Config-N` and are, for now, unreadable without the map.
+
+### 4.2 The keyword index (`swXmlContents/KeyWords`)
+
+Every document (seen from format 4100 on) carries an XML index after one non-XML byte (0x86 or 0x85): `Feature`,
+`Sketch`, `Extrusion`, `Cut`, `HoleWizard`, `Block`, `Reference` (assembly components, drawing references),
+`Configuration` (with `Material`), and in drawings `Sheet` (paper size, scale, sheet-format path, `View` children with
+their model file), `View`, `Note`, `Table`/`Cell` and title-block `Attribute` texts. Items carry `id`, `Name`, `Type`
+and `Dimension` children whose text is the displayed value (`<MOD-DIAM>` = Ø, `R` radius, `°` angle, `( )` driven).
+`Type` is the localized default name stem (German "Fase" = Chamfer), not a type code; `swreader/keywords.py` maps the
+stems seen in 17,000 documents to English names. Sorting features by id gives the creation order. Read with
+`swread features`.
+
+### 4.3 Sketches (`sgSketch`, partly decoded)
+
+Checked on 6,466 parts, formats 4700-19000 (the origin sketch of each; 2012 user sketches by hand):
+
+* `sgSketch` data starts with arrays of entity records, each array `u32 count` then per record `u16, u32` and the
+  record. Points first, then lines, then 13 more arrays (empty in the origin and in line-only sketches; arcs and the
+  other curve types are in these), then a WORD-counted object list of dimensions and relations (`sgPntPntDist`,
+  `sgLLDist`, `sgAnglDim`, ... each with its `moLengthParameter_c` / `moAngleParameter_c`) - not yet decoded.
+* Entity record start (`sk_entity`): `u32 id`, 17 constant bytes `FF FF 07 00 01 FF*8 00 00 80 BF`, `u8, u32, u8`,
+  4 WORDs, `f32 -1`, an object (null, or `sgExtEnt_c` when the entity is projected from outside the sketch), WORD,
+  9 bytes, `f64`, and from format 16000 8 more bytes.
+* Point: `u16` flags (0x1E, 0x1F for the origin), `f64 x, f64 y` (metres, sketch space), two WORDs, two handle
+  objects (the entities ending at the point, or null), `u16, i32 -2`, 36 bytes.
+* Line: `u16 start, u16 end` (point indices), `u32`, `f64`, `u32`.
+* `sgPointHandle` / `sgLineHandle` / `sgArcHandle` / `sgEntHandle`: `u16 index, i32` - references into the arrays.
+* The origin feature: feature base, 10 bytes (6 from format 14000), then its `sgSketch` (one point); after the 13
+  empty arrays comes a block (`01 00 00 00 ... 11 00 00 00 02 00 00 00`, 2 bytes longer from 10000, 4 from 18000),
+  the origin's `sgPointHandle`, a version-dependent block, and `moCompRefPlane_c` (fixed 119 / 159 / 163 bytes by
+  version: a reference to the sketch plane).
+
 Class names are descriptive: parts use `moPart_c`, `moRefPlane_c`, `moProfileFeature_c`, `sgSketch` (sketch),
 `sgLineHandle`, `sgArcHandle`, `sgPointHandle`, `sgPntPntDist` / `sgPntLineDist` / `sgCircleDim` / `sgAnglDim`
 (sketch dimensions), `moLengthParameter_c` / `moAngleParameter_c` (dimension values), `moExtrusion_c`,
@@ -98,7 +143,7 @@ Class names are descriptive: parts use `moPart_c`, `moRefPlane_c`, `moProfileFea
 `moMirrorPattern_c`, `moSweep_c`, `moHelix_c`, …; drawings use `moView_c`, `moDisplayDistanceDim_c`,
 `moDimTolerance_c`, `moDisplayNote_c`, `moAnnotationTable_c`, …
 
-### 4.1 Named nodes (partly decoded)
+### 4.1 Named nodes and features (partly decoded)
 
 Every feature, folder, plane, sketch and parameter starts with a node-name object (its own class, defined in
 `Config-N`): `CString name`, `u32 0`, `u32 flags` (`0x40000000`, `0xC0000000` seen), `u32 id`, then a block whose
