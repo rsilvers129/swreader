@@ -156,6 +156,16 @@ def _favorites(r, o):
     o["u20_u"] = r.raw(8 if (r.version or 0) >= 10000 else 2)
 
 
+@layout("moNotesAreaFtrFolder_c")
+def _notes_area(r, o):
+    """Notes folder ("Notes"/"Hinweise") and its end marker ("<name>___EndTag___"), both in the annotations folder."""
+    feature(r, o)
+    name = o["node"].get("name", "") if isinstance(o.get("node"), dict) else ""
+    if name.endswith("___EndTag___"):
+        # two object indices (u32), then a second stamp block and feature tail; fixed size
+        o["u20_u"] = r.raw(_by_version(r, [(0, 165), (14000, 183)]))
+
+
 @layout("moSelectionSetFolder_c")
 def _selection_sets(r, o):
     feature(r, o)
@@ -176,12 +186,16 @@ def _body_folder(r, o):
 
 @layout("moDetailCabinet_c")
 def _detail_cabinet(r, o):
-    """Annotations folder."""
-    feature(r, o)
+    """Annotations folder. Before 2009 a full feature; from format 10000 only a name and its sub-folders."""
     if (r.version or 0) < 10000:
+        feature(r, o)
         o["u20_u"] = r.u16()
         o["scale_u"] = (r.f64(), r.f64())
         o["u21_u"] = r.u16()
+    else:
+        o["node"] = r.obj()
+        o["u20_u"] = r.u16()
+        o["items"] = r.objs()            # notes folder, tables folder ...
 
 
 @layout("moMaterialFolder_c")

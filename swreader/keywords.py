@@ -83,7 +83,14 @@ _NAMES = {
     "ConvertSolid": ["Convert-Solid"],
     "SheetMetal": ["Sheet-Metal", "Blech"],
     "EdgeFlange": ["Edge-Flange", "Kantenlasche"],
-    "EdgeBend": ["EdgeBend"],
+    "EdgeBend": ["EdgeBend", "Kantenbiegung"],
+    "BaseFlange": ["Base-Flange", "Basislasche"],
+    "MirrorBend": ["MirrorBend"],
+    "JogBend": ["JogBend", "Versatz"],
+    "SketchBend": ["SketchBend", "Skizzierte Biegung"],
+    "Flatten": ["Flatten"],
+    "BaseBody": ["Basisteil", "Base-Part", "Base Part"],        # derived / inserted part
+    "FreezeBar": ["Freeze"],
     "FlatPattern": ["Flat-Pattern", "Abwicklung"],
     "SketchPicture": ["Sketch Picture", "Skizzenbild"],
     "SketchTransform": ["Sketch Transformation"],
@@ -201,7 +208,7 @@ _KIND_TYPES = {"Extrusion": "Extrusion", "Cut": "Cut", "HoleWizard": "HoleWzd", 
 def canonical(kind: str, stored: str | None) -> str | None:
     """English type for an item: from its stored Type (either language), else from its element kind."""
     if stored:
-        c = CANONICAL.get(stored.strip().lower())
+        c = _lookup(stored)
         if c:
             return c
         if kind == "Extrusion" and stored.lower().startswith(("schnitt", "cut")):
@@ -240,6 +247,14 @@ def _stem(name: str | None) -> str | None:
         return None
     m = re.fullmatch(r"(.*?\D)\d+", name.strip())
     return m.group(1) if m else None
+
+
+def _lookup(stored: str) -> str | None:
+    s = stored.strip().lower()
+    if s in CANONICAL:
+        return CANONICAL[s]
+    s = re.sub(r"[-<].*$", "", s).rstrip("*").strip()      # 'Flatten-<Kantenbiegung2>', 'Freeze***'
+    return CANONICAL.get(s)
 
 
 def _item(e) -> dict:
