@@ -26,7 +26,7 @@ def test_logs_and_stamps():
 
 
 def test_unknown_class():
-    r = Reader(b"\xff\xff\x01\x00\x0a\x00moMystery_c")
+    r = Reader(b"\xff\xff\x01\x00\x0b\x00moMystery_c")
     try:
         r.obj()
     except UnknownClass as e:
