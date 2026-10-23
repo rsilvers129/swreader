@@ -94,12 +94,12 @@ def fmt_angle(v):
     return "?" if v is None else f"{math.degrees(v):.3f}".rstrip("0").rstrip(".") + "°"
 
 
+# swDimensionType_e
+DIM_ANGULAR, DIM_RADIAL, DIM_DIAMETER, DIM_ANGULAR_ORDINATE = 3, 5, 6, 16
+
+
 def is_angle(d) -> bool:
-    # swDimensionType_e: 2 = angular (linear 1? ordinate ...). Fall back to the name/text when unsure.
-    if d.get("dimension_type") in (2,):
-        return True
-    t = " ".join((d.get("text") or {}).values())
-    return "°" in t
+    return d.get("dimension_type") in (DIM_ANGULAR, DIM_ANGULAR_ORDINATE)
 
 
 def fmt_dim(d, u):
@@ -120,6 +120,10 @@ def fmt_dim(d, u):
             s = f"[{s}] basic"
     text = d.get("text") or {}
     pre, post = text.get("prefix", ""), text.get("suffix", "")
+    if not pre and d.get("dimension_type") == DIM_RADIAL:
+        pre = "R"
+    elif not pre and d.get("dimension_type") == DIM_DIAMETER:
+        pre = "Ø"
     return f"{pre}{s}{post}".strip()
 
 

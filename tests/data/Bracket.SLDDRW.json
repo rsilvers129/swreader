@@ -63,7 +63,7 @@
         "dimension": {
          "name": "D1",
          "value": 0.0508,
-         "dimension_type": 1
+         "dimension_type": 2
         }
        },
        {
@@ -72,7 +72,7 @@
         "dimension": {
          "name": "D2",
          "value": 0.0254,
-         "dimension_type": 1,
+         "dimension_type": 2,
          "tolerance": {
           "type": 4,
           "kind": "symmetric",
@@ -87,7 +87,7 @@
         "dimension": {
          "name": "D1",
          "value": 0.003175,
-         "dimension_type": 3,
+         "dimension_type": 5,
          "text": {
           "prefix": "2X R"
          }

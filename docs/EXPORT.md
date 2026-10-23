@@ -36,7 +36,7 @@ summarised, and fed to an LLM, and the Fusion add-in (`fusion/`) rebuilds parts 
 ```json
 {
   "format": "swexport", "format_version": 1,
-  "exporter": {"name": "swexport", "version": "1.0.0", "solidworks": "34.1.0", "exported_utc": "..."},
+  "exporter": {"name": "swexport", "version": "1.0.1", "solidworks": "34.1.0", "exported_utc": "..."},
   "source": {"path": "...", "file": "Bracket.SLDPRT", "bytes": 123456, "modified_utc": "..."},
   "document": { ... },
   "part": { ... } | "assembly": { ... } | "drawing": { ... },

@@ -86,15 +86,14 @@ namespace SwExport
                 .Add("position", Com.Doubles(Com.Try(a, "GetPosition")))
                 .Add("layer", Empty(Com.Str(Com.Try(a, "Layer"))));
 
-            var n = Com.Int(Com.Try(a, "GetTextCount"));               // the displayed text of any annotation
+            var s = Com.Try(a, "GetSpecificAnnotation");
+            var n = Com.Int(Com.Try(s, "GetTextCount"));               // notes, GD&T, datums, surface finish
             if (n.HasValue && n.Value > 0)
             {
                 var texts = new JArr();
-                for (int i = 0; i < n.Value; i++) texts.Add(Com.Str(Com.Try(a, "GetTextAtIndex", i)));
+                for (int i = 0; i < n.Value; i++) texts.Add(Com.Str(Com.Try(s, "GetTextAtIndex", i)));
                 o.Add("text", texts);
             }
-
-            var s = Com.Try(a, "GetSpecificAnnotation");
             switch (t)
             {
                 case Sw.AnnDimension:
@@ -114,13 +113,13 @@ namespace SwExport
                         fr.Add(new JObj()
                             .Add("values", Definitions.Simple(Com.Try(s, "GetFrameValues", i)))
                             .Add("symbols", Definitions.Simple(Com.Try(s, "GetFrameSymbols3", i))));
-                    o.Add("gtol", new JObj().Add("frames", fr).Add("datum_label", Com.Str(Com.Try(s, "GetDatumLabel"))));
+                    o.Add("gtol", new JObj().Add("frames", fr).Add("datum_identifier", Com.Str(Com.Try(s, "GetDatumIdentifier"))));
                     break;
                 case Sw.AnnDatumTag:
                     o.Add("datum", Com.Str(Com.Try(s, "GetLabel")));
                     break;
                 case Sw.AnnSurfaceFinish:
-                    o.Add("surface_finish", new JObj().Add("symbol", Com.Int(Com.Try(s, "GetSymbol2"))));
+                    o.Add("surface_finish", new JObj().Add("symbol", Com.Int(Com.Try(s, "GetSymbol"))));
                     break;
             }
             return o;
@@ -142,8 +141,9 @@ namespace SwExport
                     for (int j = 0; j < cols; j++) row.Add(Com.Str(Com.Try(t, "Text", i, j)) ?? "");
                     cells.Add(row);
                 }
+                var tt = Com.Int(Com.Try(t, "Type"));
                 r.Add(new JObj()
-                    .Add("type", Com.Int(Com.Try(t, "Type")))
+                    .Add("type", tt).Add("kind", Sw.Name(Sw.TableKinds, tt))
                     .Add("title", Empty(Com.Str(Com.Try(t, "Title"))))
                     .Add("rows", rows).Add("columns", cols)
                     .Add("cells", cells));

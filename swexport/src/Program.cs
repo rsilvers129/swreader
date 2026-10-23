@@ -21,7 +21,7 @@ namespace SwExport
 {
     public static class Program
     {
-        public const string Version = "1.0.0";
+        public const string Version = "1.0.1";
 
         const string Usage = @"swexport " + Version + @" - export SolidWorks documents to open formats (needs SolidWorks)
 

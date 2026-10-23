@@ -47,7 +47,8 @@ namespace SwExport
         {
             new P("type", "Type"), new P("angle", "EdgeChamferAngle"),
             new P("distance", "GetEdgeChamferDistance", 0), new P("distance_2", "GetEdgeChamferDistance", 1),
-            new P("flip_direction", "FlipDirection"), new P("propagate_tangent", "PropagateFeatureToParts"),
+            new P("flipped", "GetIsFlipped"), new P("equal_distance", "EqualDistance"),
+            new P("tangent_propagation", "TangentPropagation"),
         };
 
         static readonly P[] Hole =
@@ -80,7 +81,7 @@ namespace SwExport
         };
 
         static readonly P[] Mirror = { new P("geometry_pattern", "GeometryPattern") };
-        static readonly P[] Shell = { new P("thickness", "Thickness"), new P("outward", "Outward") };
+        static readonly P[] Shell = { new P("thickness", "Thickness"), new P("outward", "Direction") };
         static readonly P[] Draft = { new P("type", "Type"), new P("angle", "Angle"), new P("reverse", "ReverseDirection") };
         static readonly P[] Helix =
         {
@@ -95,7 +96,7 @@ namespace SwExport
             new P("standard", "Standard"), new P("size", "Size"), new P("callout", "ThreadCallout"),
             new P("thread_class", "ThreadClass"), new P("apply_thread", "ApplyThread"),
         };
-        static readonly P[] Sweep = { new P("twist_type", "TwistControlType"), new P("twist_angle", "TwistAngle"), new P("merge", "Merge"), new P("is_boss", "IsBossFeature"), new P("is_thin", "IsThinFeature") };
+        static readonly P[] Sweep = { new P("twist_type", "TwistControlType"), new P("twist_angle", "GetTwistAngle"), new P("merge", "Merge"), new P("is_boss", "IsBossFeature"), new P("is_thin", "IsThinFeature") };
         static readonly P[] Loft = { new P("closed", "Close"), new P("merge", "Merge"), new P("is_boss", "IsBossFeature"), new P("is_thin", "IsThinFeature") };
 
         static P[] TableFor(string t)
@@ -164,13 +165,15 @@ namespace SwExport
                 case "Extrusion": case "Cut": case "Boss": case "BossThin": case "CutThin": case "ExtrusionThin": case "ICE":
                     s.Add("end_reference", Geometry.Entity(Com.Try(def, "GetEndConditionReference", true)));
                     s.Add("end_reference_2", Geometry.Entity(Com.Try(def, "GetEndConditionReference", false)));
-                    s.Add("direction", Geometry.Entity(Com.Try(def, "Direction")));
+                    s.Add("direction", Geometry.Entity(Com.Try(def, "GetDirectionReference", true)));
+                    s.Add("contours", Contours(Com.Try(def, "Contours")));
                     break;
                 case "Fillet": case "VarFillet":
                     s.Add("items", Items(def, "FilletItemsCount", "GetFilletItemAtIndex"));
                     break;
                 case "Chamfer":
-                    s.Add("items", List(Com.Try(def, "GetEdges")) ?? Items(def, "GetEntitiesToChamferCount", "GetEntitiesToChamfer"));
+                    s.Add("items", List(Com.Try(def, "Edges")));
+                    s.Add("faces", List(Com.Try(def, "Faces")));
                     break;
                 case "LPattern":
                     s.Add("direction_1", Geometry.Entity(Com.Try(def, "D1Axis")));
@@ -217,6 +220,22 @@ namespace SwExport
             if (a == null || a.Length == 0) return null;
             var r = new JArr();
             foreach (var e in a) r.Add(Geometry.Entity(e));
+            return r;
+        }
+
+        /// Sketch contours a feature uses: each as the ids of its sketch segments.
+        static JArr Contours(object v)
+        {
+            var a = Com.Arr(v);
+            if (a == null || a.Length == 0) return null;
+            var r = new JArr();
+            foreach (var c in a)
+            {
+                var segs = Com.Arr(Com.Try(c, "GetSketchSegments"));
+                var ids = new JArr();
+                if (segs != null) foreach (var s in segs) ids.Add(Geometry.SketchId(Com.Arr(Com.Try(s, "GetID"))));
+                r.Add(ids);
+            }
             return r;
         }
 

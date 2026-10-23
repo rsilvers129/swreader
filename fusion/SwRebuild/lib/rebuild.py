@@ -25,6 +25,7 @@ TOL = 1e-4                    # cm: geometric matching tolerance (1 micron)
 # swEndConditions_e
 END_BLIND, END_THROUGH_ALL, END_THROUGH_NEXT, END_UP_TO_VERTEX, END_UP_TO_SURFACE, END_OFFSET_SURFACE, \
     END_MID_PLANE, END_UP_TO_BODY = range(8)
+END_THROUGH_ALL_BOTH, END_UP_TO_SELECTION, END_UP_TO_NEXT = 9, 10, 11
 
 DISTANCE_UNITS = {"mm": "MillimeterDistanceUnits", "cm": "CentimeterDistanceUnits", "m": "MeterDistanceUnits",
                   "in": "InchDistanceUnits", "ft": "FootDistanceUnits", "ft-in": "InchDistanceUnits"}
@@ -336,7 +337,7 @@ class Rebuilder:
                     gc.addHorizontalPoints(ents[0], ents[1])
                 elif k == "vertical_points" or (k == "vertical" and len(ents) == 2):
                     gc.addVerticalPoints(ents[0], ents[1])
-                elif k == "coincident" and len(ents) == 2:
+                elif k in ("coincident", "merge_points") and len(ents) == 2:
                     a, b = ents
                     if isinstance(b, adsk.fusion.SketchPoint) and not isinstance(a, adsk.fusion.SketchPoint):
                         a, b = b, a
@@ -345,7 +346,8 @@ class Rebuilder:
                 elif k == "parallel":
                     gc.addParallel(ents[0], ents[1])
                 elif k == "perpendicular":
-                    gc.addPerpendicular(ents[0], ents[1])
+                    a, b = ents if isinstance(ents[0], adsk.fusion.SketchLine) else ents[::-1]
+                    gc.addPerpendicular2(a, b)
                 elif k == "tangent":
                     gc.addTangent(ents[0], ents[1])
                 elif k in ("concentric", "coradial"):
@@ -374,7 +376,7 @@ class Rebuilder:
             if not att or value is None:
                 continue
             try:
-                dim = self._add_dimension(s, dims, att, value)
+                dim = self._add_dimension(s, dims, att, value, d.get("dimension_type"))
                 if dim is not None:
                     try:
                         dim.parameter.value = value if _is_angle(dim) else value * CM
@@ -384,7 +386,7 @@ class Rebuilder:
             except Exception as e:                              # noqa: BLE001
                 self.log(f"  dimension {d.get('name')} not added ({e})")
 
-    def _add_dimension(self, s, dims, att, value):
+    def _add_dimension(self, s, dims, att, value, sw_type=None):
         F = adsk.fusion
         text = _text_point(att)
         if len(att) == 1:
@@ -392,10 +394,10 @@ class Rebuilder:
             if isinstance(a, F.SketchLine):
                 return dims.addDistanceDimension(a.startSketchPoint, a.endSketchPoint,
                                                  F.DimensionOrientations.AlignedDimensionOrientation, text)
-            if isinstance(a, F.SketchCircle):
+            if isinstance(a, (F.SketchCircle, F.SketchArc)):
+                if sw_type == 5 or (sw_type != 6 and isinstance(a, F.SketchArc)):
+                    return dims.addRadialDimension(a, text)
                 return dims.addDiameterDimension(a, text)
-            if isinstance(a, F.SketchArc):
-                return dims.addRadialDimension(a, text)
             return None
         a, b = att[0], att[1]
         if isinstance(a, F.SketchPoint) and isinstance(b, F.SketchPoint):
@@ -489,9 +491,13 @@ class Rebuilder:
         def attempt(reverse):
             inp = ext.createInput(prof, self._operation(f, cut))
             direction = self._direction(s, sk, reverse)
-            if cond == END_MID_PLANE:
+            if cond == END_THROUGH_ALL_BOTH:
+                inp.setTwoSidesExtent(adsk.fusion.ThroughAllExtentDefinition.create(),
+                                      adsk.fusion.ThroughAllExtentDefinition.create())
+            elif cond == END_MID_PLANE:
                 inp.setSymmetricExtent(V(depth * CM), True)
-            elif cond == END_THROUGH_ALL or (cut and cond in (END_THROUGH_NEXT, END_UP_TO_SURFACE, END_UP_TO_BODY)):
+            elif cond == END_THROUGH_ALL or (cut and cond in (END_THROUGH_NEXT, END_UP_TO_NEXT, END_UP_TO_SURFACE,
+                                                                END_UP_TO_BODY, END_UP_TO_SELECTION)):
                 inp.setOneSideExtent(adsk.fusion.ThroughAllExtentDefinition.create(), direction)
             elif d.get("both_directions"):
                 d2 = d.get("depth_2") or depth
@@ -570,10 +576,7 @@ class Rebuilder:
             raise Skip("fillet radius missing")
         fil = self.root.features.filletFeatures
         inp = fil.createInput()
-        try:
-            inp.edgeSetInputs.addConstantRadiusEdgeSet(edges, V(r * CM), True)
-        except Exception:
-            inp.addConstantRadiusEdgeSet(edges, V(r * CM), True)
+        inp.edgeSetInputs.addConstantRadiusEdgeSet(edges, V(r * CM), True)
         feat = fil.add(inp)
         feat.name = f["name"]
         self.features[f["name"]] = feat
@@ -593,12 +596,8 @@ class Rebuilder:
         if not dist:
             raise Skip("chamfer distance missing")
         ch = self.root.features.chamferFeatures
-        try:
-            inp = ch.createInput2()
-            inp.chamferEdgeSets.addEqualDistanceChamferEdgeSet(edges, V(dist * CM), True)
-        except Exception:
-            inp = ch.createInput(edges, True)
-            inp.setToEqualDistance(V(dist * CM))
+        inp = ch.createInput2()
+        inp.chamferEdgeSets.addEqualDistanceChamferEdgeSet(edges, V(dist * CM), True)
         feat = ch.add(inp)
         feat.name = f["name"]
         self.features[f["name"]] = feat

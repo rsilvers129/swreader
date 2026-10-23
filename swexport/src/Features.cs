@@ -126,6 +126,7 @@ namespace SwExport
                 .Add("value", Com.Dbl(Com.Try(dim, "SystemValue")))
                 .Add("display_value", Com.Dbl(Com.Try(dim, "Value")))
                 .Add("dimension_type", Com.Int(Com.Try(dd, "Type2")))
+                .Add("kind", Sw.Name(Sw.DimensionKinds, Com.Int(Com.Try(dd, "Type2"))))
                 .Add("driven_state", Com.Int(Com.Try(dim, "DrivenState")))
                 .Add("read_only", Com.Bool(Com.Try(dim, "ReadOnly")));
 
@@ -145,8 +146,8 @@ namespace SwExport
             }
 
             var text = new JObj();
-            string[] parts = { null, "all", "prefix", "suffix", "callout_above", "callout_below" };
-            for (int i = 1; i <= 5; i++)
+            string[] parts = { "all", "prefix", "suffix", "callout_above", "callout_below" };     // swDimensionTextParts_e
+            for (int i = 0; i < parts.Length; i++)
             {
                 var s = Com.Str(Com.Try(dd, "GetText", i));
                 if (!string.IsNullOrEmpty(s)) text.Add(parts[i], s);

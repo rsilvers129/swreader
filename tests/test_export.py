@@ -11,6 +11,7 @@ def test_part_summary():
     assert "Material: 6061-T6 (SS)" in s
     assert "Boss-Extrude1 (boss-extrude): depth 0.25 in" in s
     assert "radius 0.125 in on 2 edges" in s
+    assert "D1=R0.125 in" in s
     assert "D2=1 in ±0.005 in" in s
     assert "Comments" not in s                      # folders are not design features
 

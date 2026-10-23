@@ -50,8 +50,8 @@ namespace SwExport
         public static readonly Dictionary<int, string> ToleranceKinds = new Dictionary<int, string>
         {
             { 0, "none" }, { 1, "basic" }, { 2, "bilateral" }, { 3, "limit" }, { 4, "symmetric" }, { 5, "min" },
-            { 6, "max" }, { 7, "block" }, { 8, "general" }, { 9, "fit" }, { 10, "fit_with_tolerance" },
-            { 11, "fit_tolerance_only" },
+            { 6, "max" }, { 7, "fit" }, { 8, "fit_with_tolerance" }, { 9, "fit_tolerance_only" }, { 10, "block" },
+            { 11, "general" },
         };
 
         // swConstraintType_e (sketch relations)
@@ -61,7 +61,8 @@ namespace SwExport
             { 6, "tangent" }, { 7, "parallel" }, { 8, "perpendicular" }, { 9, "coincident" }, { 10, "concentric" },
             { 11, "symmetric" }, { 12, "midpoint" }, { 13, "intersection" }, { 14, "equal" }, { 15, "diameter" },
             { 16, "offset_edge" }, { 17, "fixed" }, { 25, "horizontal_points" }, { 26, "vertical_points" },
-            { 27, "collinear" }, { 28, "coradial" }, { 32, "use_edge" },
+            { 27, "collinear" }, { 28, "coradial" }, { 32, "use_edge" }, { 40, "pierce" }, { 42, "merge_points" },
+            { 45, "normal" }, { 48, "along_x" }, { 49, "along_y" }, { 50, "along_z" }, { 56, "intersection" },
         };
 
         // swMateType_e
@@ -72,6 +73,22 @@ namespace SwExport
             { 11, "width" }, { 12, "lock_to_sketch" }, { 13, "rack_pinion" }, { 15, "path" }, { 16, "lock" },
             { 17, "screw" }, { 18, "linear_coupler" }, { 19, "universal_joint" }, { 20, "coordinate" },
             { 21, "slot" }, { 22, "hinge" }, { 23, "slider" }, { 24, "profile_center" }, { 25, "magnetic" },
+        };
+
+        // swDimensionType_e
+        public static readonly Dictionary<int, string> DimensionKinds = new Dictionary<int, string>
+        {
+            { 1, "ordinate" }, { 2, "linear" }, { 3, "angular" }, { 4, "arc_length" }, { 5, "radial" }, { 6, "diameter" },
+            { 7, "horizontal_ordinate" }, { 8, "vertical_ordinate" }, { 9, "z_axis" }, { 10, "chamfer" },
+            { 11, "horizontal_linear" }, { 12, "vertical_linear" }, { 13, "scalar" }, { 14, "radial_linear" },
+            { 15, "diametric_linear" }, { 16, "angular_ordinate" },
+        };
+
+        // swTableAnnotationType_e
+        public static readonly Dictionary<int, string> TableKinds = new Dictionary<int, string>
+        {
+            { 0, "general" }, { 1, "hole" }, { 2, "bom" }, { 3, "revision" }, { 4, "weldment_cut_list" }, { 5, "title_block" },
+            { 6, "weld" }, { 7, "bend" }, { 8, "punch" }, { 9, "general_tolerance" }, { 10, "family" },
         };
 
         // swDrawingViewTypes_e
