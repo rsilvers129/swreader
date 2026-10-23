@@ -8,6 +8,11 @@
   swread index DIR [-o X.jsonl]    `info` for every document under DIR, one JSON line each
   swread classes FILE [SECTION]    MFC classes defined in each object stream (or one section)
   swread dump FILE SECTION [--start N --end N]   annotated dump of an object stream (format work)
+
+swexport output (docs/EXPORT.md):
+  swread summary FILE.json         readable design summary of an exported document
+  swread params FILE.json          every dimension: feature, name, value, tolerance
+  swread library EXPORT-DIR [-o X.jsonl]   search records for every exported document
 """
 from __future__ import annotations
 
@@ -16,7 +21,7 @@ import json
 import os
 import sys
 
-from . import explore, parasolid, props
+from . import explore, export, parasolid, props
 from .container import FormatError, open_file, unwrap
 from .mfc import find_class_names
 
@@ -122,6 +127,26 @@ def cmd_dump(a):
     print(explore.dump(d, a.start, a.end))
 
 
+def cmd_summary(a):
+    print(export.summary(export.load(a.file)))
+
+
+def cmd_params(a):
+    for p in export.parameters(export.load(a.file)):
+        print(f"{p['feature']:<28} {p['name'] or '':<8} {p['text']}")
+
+
+def cmd_library(a):
+    out = open(a.output, "w", encoding="utf-8") if a.output else sys.stdout
+    n = 0
+    for doc in export.documents(a.dir):
+        out.write(json.dumps(export.index_record(doc), ensure_ascii=False) + "\n")
+        n += 1
+    if a.output:
+        out.close()
+    print(f"{n} documents", file=sys.stderr)
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(prog="swread", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -134,6 +159,9 @@ def main(argv=None):
     s = sub.add_parser("classes"); s.add_argument("file"); s.add_argument("section", nargs="?"); s.set_defaults(fn=cmd_classes)
     s = sub.add_parser("dump"); s.add_argument("file"); s.add_argument("section")
     s.add_argument("--start", type=int, default=0); s.add_argument("--end", type=int); s.set_defaults(fn=cmd_dump)
+    s = sub.add_parser("summary"); s.add_argument("file"); s.set_defaults(fn=cmd_summary)
+    s = sub.add_parser("params"); s.add_argument("file"); s.set_defaults(fn=cmd_params)
+    s = sub.add_parser("library"); s.add_argument("dir"); s.add_argument("-o", "--output"); s.set_defaults(fn=cmd_library)
     a = ap.parse_args(argv)
     try:
         a.fn(a)

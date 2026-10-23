@@ -32,3 +32,8 @@ __pycache__/
 .pytest_cache/
 build/
 dist/
+# swexport build output
+swexport/bin/
+swexport/obj/
+*.rebuild.log
+swexport/out/

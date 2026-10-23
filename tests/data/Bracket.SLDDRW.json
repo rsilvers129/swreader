@@ -1,0 +1,144 @@
+{
+ "format": "swexport",
+ "format_version": 1,
+ "exporter": {
+  "name": "swexport",
+  "version": "1.0.0"
+ },
+ "source": {
+  "file": "Bracket.SLDDRW"
+ },
+ "document": {
+  "type": "drawing",
+  "title": "Bracket - Sheet1",
+  "units": {
+   "length": "in"
+  },
+  "custom_properties": {
+   "DrawnBy": {
+    "expression": "J. Engineer"
+   }
+  }
+ },
+ "drawing": {
+  "sheets": [
+   {
+    "name": "Sheet1",
+    "scale": [
+     1,
+     1
+    ],
+    "first_angle": false,
+    "size": [
+     0.2794,
+     0.2159
+    ],
+    "views": [
+     {
+      "name": "Sheet1",
+      "role": "sheet",
+      "type": 1,
+      "kind": "sheet",
+      "annotations": [
+       {
+        "kind": "note",
+        "type": 6,
+        "note": {
+         "text": "UNLESS OTHERWISE SPECIFIED DIMENSIONS ARE IN INCHES"
+        }
+       }
+      ]
+     },
+     {
+      "name": "Drawing View1",
+      "role": "view",
+      "type": 7,
+      "kind": "named",
+      "orientation": "*Top",
+      "model": "C:\\Designs\\Bracket.SLDPRT",
+      "annotations": [
+       {
+        "kind": "dimension",
+        "type": 4,
+        "dimension": {
+         "name": "D1",
+         "value": 0.0508,
+         "dimension_type": 1
+        }
+       },
+       {
+        "kind": "dimension",
+        "type": 4,
+        "dimension": {
+         "name": "D2",
+         "value": 0.0254,
+         "dimension_type": 1,
+         "tolerance": {
+          "type": 4,
+          "kind": "symmetric",
+          "min": -0.000127,
+          "max": 0.000127
+         }
+        }
+       },
+       {
+        "kind": "dimension",
+        "type": 4,
+        "dimension": {
+         "name": "D1",
+         "value": 0.003175,
+         "dimension_type": 3,
+         "text": {
+          "prefix": "2X R"
+         }
+        }
+       },
+       {
+        "kind": "gtol",
+        "type": 5,
+        "gtol": {
+         "frames": [
+          {
+           "values": [
+            "0.005",
+            "A"
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "kind": "datum_tag",
+        "type": 2,
+        "datum": "A"
+       }
+      ],
+      "tables": [
+       {
+        "type": 3,
+        "rows": 2,
+        "columns": 3,
+        "cells": [
+         [
+          "REV",
+          "DESCRIPTION",
+          "DATE"
+         ],
+         [
+          "A",
+          "RELEASED",
+          "10/01/26"
+         ]
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "outputs": [
+  "Bracket.pdf"
+ ],
+ "errors": []
+}

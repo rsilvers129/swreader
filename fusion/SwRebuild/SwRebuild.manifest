@@ -1,0 +1,11 @@
+{
+  "autodeskProduct": "Fusion",
+  "type": "addin",
+  "id": "8b0f3c1e-5b8e-4f8e-9a51-2f7d1f4f2a10",
+  "author": "swreader",
+  "description": {"": "Rebuild SolidWorks parts in Fusion from swexport JSON, feature by feature, with parametric history"},
+  "version": "0.1.0",
+  "runOnStartup": false,
+  "supportedOS": "windows|mac",
+  "editEnabled": true
+}
