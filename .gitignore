@@ -40,3 +40,6 @@ swexport/out/
 
 # hand-written example exports used by the tests (not real CAD data)
 !tests/data/*.json
+
+# per-session notes from agents (see docs/AGENT-GUIDE.md)
+HANDOFF.md
