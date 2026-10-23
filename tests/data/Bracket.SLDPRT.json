@@ -1,0 +1,458 @@
+{
+ "format": "swexport",
+ "format_version": 1,
+ "exporter": {
+  "name": "swexport",
+  "version": "1.0.0",
+  "solidworks": "34.1.0",
+  "exported_utc": "2026-10-23T00:00:00Z"
+ },
+ "source": {
+  "path": "C:\\Designs\\Bracket.SLDPRT",
+  "file": "Bracket.SLDPRT",
+  "bytes": 120000,
+  "modified_utc": "2026-10-01T00:00:00Z"
+ },
+ "document": {
+  "type": "part",
+  "title": "Bracket",
+  "active_configuration": "Default",
+  "units": {
+   "values": "SI: metres, radians, kilograms",
+   "length": "in",
+   "decimals": 3
+  },
+  "custom_properties": {
+   "Description": {
+    "expression": "MOUNTING BRACKET"
+   },
+   "Material": {
+    "expression": "\"SW-Material@Bracket.SLDPRT\"",
+    "value": "6061-T6"
+   }
+  },
+  "configurations": [
+   {
+    "name": "Default"
+   }
+  ],
+  "equations": [
+   {
+    "equation": "\"D2@Boss-Extrude1\" = \"D1@Sketch1\" / 4",
+    "value": 0.00635,
+    "global_variable": false
+   }
+  ]
+ },
+ "part": {
+  "material": {
+   "name": "6061-T6 (SS)",
+   "database": "solidworks materials"
+  },
+  "mass": {
+   "mass": 0.0441,
+   "volume": 1.6387e-05,
+   "surface_area": 0.0071,
+   "density": 2700,
+   "center_of_mass": [
+    0,
+    0.003175,
+    0
+   ]
+  },
+  "bounding_box": [
+   -0.0254,
+   0,
+   -0.0127,
+   0.0254,
+   0.00635,
+   0.0127
+  ],
+  "bodies": [
+   {
+    "name": "Fillet1",
+    "faces": 10,
+    "edges": 24
+   }
+  ],
+  "features": [
+   {
+    "index": 0,
+    "name": "Comments",
+    "type": "CommentsFolder"
+   },
+   {
+    "index": 9,
+    "name": "Front Plane",
+    "type": "RefPlane",
+    "definition": {
+     "transform": [
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ]
+    }
+   },
+   {
+    "index": 13,
+    "name": "Sketch1",
+    "type": "ProfileFeature",
+    "owner": "Boss-Extrude1",
+    "parents": [
+     "Top Plane"
+    ],
+    "dimensions": [
+     {
+      "name": "D1",
+      "full_name": "D1@Sketch1@Bracket.SLDPRT",
+      "value": 0.0508,
+      "dimension_type": 2,
+      "attached": [
+       {
+        "kind": "sketch_segment",
+        "id": "2-1"
+       }
+      ]
+     },
+     {
+      "name": "D2",
+      "full_name": "D2@Sketch1@Bracket.SLDPRT",
+      "value": 0.0254,
+      "dimension_type": 2,
+      "tolerance": {
+       "type": 4,
+       "kind": "symmetric",
+       "min": -0.000127,
+       "max": 0.000127
+      },
+      "attached": [
+       {
+        "kind": "sketch_segment",
+        "id": "2-2"
+       }
+      ]
+     }
+    ],
+    "sketch": {
+     "is_3d": false,
+     "model_to_sketch": [
+      1,
+      0,
+      0,
+      0,
+      0,
+      -1,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1,
+      0,
+      0,
+      0
+     ],
+     "points": [
+      {
+       "id": "1-1",
+       "xyz": [
+        -0.0254,
+        -0.0127,
+        0
+       ]
+      },
+      {
+       "id": "1-2",
+       "xyz": [
+        0.0254,
+        -0.0127,
+        0
+       ]
+      },
+      {
+       "id": "1-3",
+       "xyz": [
+        0.0254,
+        0.0127,
+        0
+       ]
+      },
+      {
+       "id": "1-4",
+       "xyz": [
+        -0.0254,
+        0.0127,
+        0
+       ]
+      }
+     ],
+     "segments": [
+      {
+       "id": "2-1",
+       "kind": "line",
+       "type": 0,
+       "construction": false,
+       "length": 0.0508,
+       "start": {
+        "id": "1-1",
+        "xyz": [
+         -0.0254,
+         -0.0127,
+         0
+        ]
+       },
+       "end": {
+        "id": "1-2",
+        "xyz": [
+         0.0254,
+         -0.0127,
+         0
+        ]
+       }
+      },
+      {
+       "id": "2-2",
+       "kind": "line",
+       "type": 0,
+       "construction": false,
+       "length": 0.0254,
+       "start": {
+        "id": "1-2",
+        "xyz": [
+         0.0254,
+         -0.0127,
+         0
+        ]
+       },
+       "end": {
+        "id": "1-3",
+        "xyz": [
+         0.0254,
+         0.0127,
+         0
+        ]
+       }
+      },
+      {
+       "id": "2-3",
+       "kind": "line",
+       "type": 0,
+       "construction": false,
+       "length": 0.0508,
+       "start": {
+        "id": "1-3",
+        "xyz": [
+         0.0254,
+         0.0127,
+         0
+        ]
+       },
+       "end": {
+        "id": "1-4",
+        "xyz": [
+         -0.0254,
+         0.0127,
+         0
+        ]
+       }
+      },
+      {
+       "id": "2-4",
+       "kind": "line",
+       "type": 0,
+       "construction": false,
+       "length": 0.0254,
+       "start": {
+        "id": "1-4",
+        "xyz": [
+         -0.0254,
+         0.0127,
+         0
+        ]
+       },
+       "end": {
+        "id": "1-1",
+        "xyz": [
+         -0.0254,
+         -0.0127,
+         0
+        ]
+       }
+      }
+     ],
+     "relations": [
+      {
+       "type": 4,
+       "kind": "horizontal",
+       "entities": [
+        {
+         "kind": "sketch_segment",
+         "id": "2-1"
+        }
+       ]
+      },
+      {
+       "type": 5,
+       "kind": "vertical",
+       "entities": [
+        {
+         "kind": "sketch_segment",
+         "id": "2-2"
+        }
+       ]
+      },
+      {
+       "type": 4,
+       "kind": "horizontal",
+       "entities": [
+        {
+         "kind": "sketch_segment",
+         "id": "2-3"
+        }
+       ]
+      },
+      {
+       "type": 5,
+       "kind": "vertical",
+       "entities": [
+        {
+         "kind": "sketch_segment",
+         "id": "2-4"
+        }
+       ]
+      },
+      {
+       "type": 11,
+       "kind": "symmetric",
+       "entities": [
+        {
+         "kind": "sketch_point",
+         "id": "1-1"
+        },
+        {
+         "kind": "sketch_point",
+         "id": "1-3"
+        },
+        {
+         "kind": "feature",
+         "name": "Point1@Origin",
+         "type": "OriginProfileFeature"
+        }
+       ]
+      }
+     ]
+    }
+   },
+   {
+    "index": 14,
+    "name": "Boss-Extrude1",
+    "type": "Extrusion",
+    "parents": [
+     "Sketch1"
+    ],
+    "children": [
+     "Fillet1"
+    ],
+    "sub_features": [
+     "Sketch1"
+    ],
+    "dimensions": [
+     {
+      "name": "D1",
+      "full_name": "D1@Boss-Extrude1@Bracket.SLDPRT",
+      "value": 0.00635,
+      "dimension_type": 2
+     }
+    ],
+    "definition": {
+     "end_condition": 0,
+     "depth": 0.00635,
+     "both_directions": false,
+     "is_boss": true,
+     "merge": true
+    }
+   },
+   {
+    "index": 15,
+    "name": "Fillet1",
+    "type": "Fillet",
+    "parents": [
+     "Boss-Extrude1"
+    ],
+    "dimensions": [
+     {
+      "name": "D1",
+      "full_name": "D1@Fillet1@Bracket.SLDPRT",
+      "value": 0.003175,
+      "dimension_type": 5
+     }
+    ],
+    "definition": {
+     "type": 0,
+     "radius": 0.003175,
+     "selections": {
+      "items": [
+       {
+        "kind": "edge",
+        "curve": "line",
+        "start": [
+         0.0254,
+         0,
+         -0.0127
+        ],
+        "end": [
+         0.0254,
+         0.00635,
+         -0.0127
+        ],
+        "mid": [
+         0.0254,
+         0.003175,
+         -0.0127
+        ]
+       },
+       {
+        "kind": "edge",
+        "curve": "line",
+        "start": [
+         -0.0254,
+         0,
+         -0.0127
+        ],
+        "end": [
+         -0.0254,
+         0.00635,
+         -0.0127
+        ],
+        "mid": [
+         -0.0254,
+         0.003175,
+         -0.0127
+        ]
+       }
+      ]
+     }
+    }
+   }
+  ]
+ },
+ "outputs": [
+  "Bracket.step",
+  "Bracket.SLDPRT.json"
+ ],
+ "errors": []
+}

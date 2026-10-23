@@ -37,3 +37,6 @@ swexport/bin/
 swexport/obj/
 *.rebuild.log
 swexport/out/
+
+# hand-written example exports used by the tests (not real CAD data)
+!tests/data/*.json
