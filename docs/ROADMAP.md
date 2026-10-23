@@ -15,7 +15,13 @@ Two routes to the design data:
 ## swexport / SwRebuild next
 - [ ] First real runs on a small folder; fix API members that differ between SolidWorks versions
 - [ ] SwRebuild: check on simple parts, then sweeps, lofts, shells, drafts, threads, up-to-surface ends
-- [ ] SwRebuild: assemblies (components + joints from mates), then drawings
+- [ ] SwRebuild: assemblies (components + joints from mates)
+- [ ] SwRebuild drawings - **limited by Fusion's API** (checked against Fusion 2705): it can create a drawing with
+      automatically placed views, add sheets, auto-dimension a sheet, draw lines/circles/arcs, insert tables and
+      images; it cannot place specific views, add specific dimensions/tolerances/fits, GD&T, datums, surface-finish
+      symbols or text notes. Plan: automatic drawing + auto-dimension + a table listing every dimension, tolerance,
+      fit, GD&T callout and note from the SolidWorks drawing (from the export JSON) for an engineer to apply; the
+      SolidWorks PDF/DXF stays the drawing of record. Revisit when the Fusion drawing API grows.
 - [ ] Validation: compare rebuilt volume / area / bounding box with the export's mass properties
 
 ## Done (v0.1)

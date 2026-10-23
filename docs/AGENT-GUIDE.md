@@ -183,6 +183,12 @@ and dimension value the native decoder should find.
   named driving dimensions, then the same feature in Fusion with the same intent (end condition, direction,
   operation).
 
+### Drawings in Fusion
+Fusion's drawing API (`adsk.drawing`, stubs `drawing.py`) can create a drawing with automatic views, add sheets,
+auto-dimension, draw sketch geometry, and add tables/images - but cannot place specific views or add specific
+dimensions, tolerances, GD&T or notes. Do not promise or fake a faithful drawing conversion; see ROADMAP for the plan.
+Re-check `drawing.py` in newer stubs before assuming anything changed.
+
 ## Workflow D - reviewing swexport output (when exports exist)
 
 For each exported document: `swread summary FILE.json`, `swread params FILE.json`, the `errors` list, and
