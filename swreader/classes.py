@@ -145,23 +145,31 @@ def feature(r, o):
         o["u16_u"] = r.raw(8)
 
 
-@layout("moCommentsFolder_c", "moSensorFolder_c", "moDocsFolder_c", "moEqnFolder_c", "moFavoriteFolder_c")
+@layout("moCommentsFolder_c", "moSensorFolder_c", "moDocsFolder_c", "moEqnFolder_c")
 def _folder(r, o):
     feature(r, o)
 
 
-@layout("moSurfaceBodyFolder_c", "moSolidBodyFolder_c")
-def _folder_u8(r, o):
+@layout("moFavoriteFolder_c")
+def _favorites(r, o):
     feature(r, o)
-    o["u20_u"] = r.u8()
+    o["u20_u"] = r.raw(8 if (r.version or 0) >= 10000 else 2)
+
+
+@layout("moSurfaceBodyFolder_c", "moSolidBodyFolder_c")
+def _body_folder(r, o):
+    feature(r, o)
+    o["u20_u"] = r.raw(12 if (r.version or 0) >= 10000 else 10)
 
 
 @layout("moDetailCabinet_c")
 def _detail_cabinet(r, o):
     """Annotations folder."""
     feature(r, o)
-    if (r.version or 0) < 16000:
-        o["u20_u"] = r.u8()
+    if (r.version or 0) < 10000:
+        o["u20_u"] = r.u16()
+        o["scale_u"] = (r.f64(), r.f64())
+        o["u21_u"] = r.u16()
 
 
 @layout("moMaterialFolder_c")
@@ -170,3 +178,45 @@ def _material_folder(r, o):
     o["material"] = r.cstring()
     if (r.version or 0) >= 6000:
         o["u20_u"] = r.u32()
+
+
+def _by_version(r, table):
+    """Pick a per-version value: table = [(min_version, value), ...] in ascending order."""
+    v = r.version or 0
+    out = table[0][1]
+    for mv, val in table:
+        if v >= mv:
+            out = val
+    return out
+
+
+# -- reference geometry -----------------------------------------------------------------------------------------
+
+@layout("moRefPlane_c")
+def _ref_plane(r, o):
+    feature(r, o)
+    o["body_u"] = r.raw(_by_version(r, [(0, 140), (6000, 142), (7000, 146)]))
+    o["data"] = r.obj()                  # mo*RefPlnData_c: how the plane is defined
+
+
+def transform(r):
+    """A placement: optional 3x3 rotation, translation, scale."""
+    t = {"rotation": r.f64s(9) if r.u8() else None}
+    t["translation"] = r.f64s(3)
+    t["scale"] = r.f64()
+    return t
+
+
+@layout("moDefaultRefPlnData_c")
+def _default_ref_plane_data(r, o):
+    """Front/Top/Right: fixed planes."""
+    o["origin"] = r.f64s(3)
+    o["normal"] = r.f64s(3)
+    o["transform"] = transform(r)
+    r.u8()
+    o["display_box"] = r.f64s(4)
+    o["u1_u"] = r.raw(6)
+    o["u2_u"] = (r.i32(), r.i32())
+    r.u8()
+    o["offsets_u"] = r.f64s(3)
+    o["u3_u"] = r.raw(_by_version(r, [(0, 8), (7000, 10), (16000, 16)]))
